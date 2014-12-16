@@ -46,7 +46,11 @@ function create(secret, req){
 
     var encryptedPayload = encrypt(secret, payload);
 
-    return jwt.encode(encryptedPayload, secret);
+
+    var jwtCsrf = jwt.encode(encryptedPayload, secret);
+    req.headers['X-CSRF-JWT'] = jwtCsrf;
+
+    return jwtCsrf;
 }
 
 /**
@@ -131,8 +135,7 @@ module.exports = {
     //Returns a jwt middleware
     setJwt: function(secret){
         return function (req, res, next){
-            var jwt = create(secret, req);
-            req.headers['X-CSRF-JWT'] = jwt;
+            create(secret, req);
             next();
         }
     },

@@ -26,6 +26,7 @@ describe('create jwt Tests', function(){
 
         var split = plainText.split(":");
         assert(split && split.length === 3 , 'Assert the decrypted jwt to have 3 fields');
+        assert(req.headers['X-CSRF-JWT'], 'Expect jwt to be set in headers');
         done();
 
     });
@@ -47,6 +48,7 @@ describe('create jwt Tests', function(){
         var split = plainText.split(":");
         assert(split && split.length === 4 , 'Assert the decrypted jwt to have 3 fields');
         assert(split[3] === req.user.encryptedAccountNumber.toString(), 'Assert the payerId in the token');
+        assert(req.headers['X-CSRF-JWT'], 'Expect jwt to be set in headers');
         done();
 
     });
@@ -69,7 +71,7 @@ describe('create jwt Tests', function(){
         middleware(req, {}, next);
 
         assert(next.called, 'Expect next() to be called');
-
+        assert(req.headers['X-CSRF-JWT'], 'Expect jwt to be set in headers');
         done();
 
     });
