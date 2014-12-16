@@ -1,0 +1,27 @@
+{
+  "name": "jwt-csrf",
+  "version": "1.0.0",
+  "description": "A jwt middleware provider for hermes",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha -R spec test",
+    "cover": "istanbul cover _mocha -- -R spec test"
+  },
+  "dependencies": {
+    "crypto-paypal": "^1.0.1",
+    "jwt-simple": "~0.2.0"
+  },
+  "devDependencies": {
+    "sinon-chai": "^2.6.0",
+    "express": "^4.10.4",
+    "istanbul": "^0.3.2",
+    "mocha": "^2.0.1",
+    "supertest": "^0.15.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.paypal.com/NodeXOShared/jwt-csrf.git"
+  },
+  "author": "vgorthy@paypal.com",
+  "license": "PayPal"
+}
