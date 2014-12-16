@@ -95,7 +95,7 @@ function validate(secret, req){
     //Expected format for decryptedPayLoad is randomToken:payerId:user-agent
     var split = decryptedPayload.split(":");
 
-    if(!split && split.length < 3){
+    if(!split || split.length < 3){
         return false;
     }
 
