@@ -38,6 +38,17 @@ Will return `true` if the token validation succeeds, else returns false.
 
 Checks for JWT in `req.headers['X-CSRF-JWT']`
 
+ 1. If the request is POST, then get the jwt from headers['X-CSRF-JWT]. If token is not present then send a 401   response.
+ 
+ 2. Try decoding JWT. JWT decoding logic will throw error if the payload does not match the encrypted value.
+ JWT is a self verifying token. If decoding throws error then send a 401.
+
+ 3. If this is a logged in user, decrypt the payload. For logged in case descrypted payload will be of the form
+ expiry:randomToken:user-agent:payerId.
+
+ Verify payerId from above decrypted value with the payerId from user's payerId.
+
+
 ## As Middlware:
 
 ### setJwt:
