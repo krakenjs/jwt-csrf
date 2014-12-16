@@ -18,7 +18,9 @@ function isLoggedIn(req){
  *
  * 3. Take encrypted value from step #2 and use jwt.encode
  *
- * 4. return result from from step #3.
+ * 4. Set it in req.headers['X-CSRF-JWT']
+ *
+ * 5. return result from from step #3.
  *
  *
  *
