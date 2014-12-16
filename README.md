@@ -50,6 +50,9 @@ Checks for JWT in `req.headers['X-CSRF-JWT']`
 
  Verify payerId from above decrypted value with the payerId from user's payerId.
 
+ 4. Additionally for both logged in and not authenticated user, match user agent as a additional level of security.
+
+
 
 ## As Middlware:
 
