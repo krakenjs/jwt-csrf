@@ -75,11 +75,12 @@ function create(options, req){
  * 2. Try decoding JWT. JWT decoding logic will throw error if the payload does not match the encrypted value.
  *  JWT is a self verifying token. If decoding throws error then send a 401.
  *
- * 3. If this is a logged in user, decrypt the payload. For logged in case descrypted payload will be of the form
- *    expiry:randomToken:user-agent:payerId.
+ * 3. If this is a logged in user, decrypt the payload. For logged in case decrypted payload will be of the form
+ *    user-agent:payerId.
  *
- *    Verify payerId from above decrypted value with the payerId from user's payerId.
+ *    Verify payerId from above decrypted value with the user's encrypted payerid.
  *
+ * 4. Additionally for both logged in and not authenticated user, match user agent as a additional level of security.
  *
  * Takes a callback. callback will be called with err if there is any error in decryption. Or else it will be called with
  * callback(null, result). result could be true or false depending on whether validation succeeds or fails.
