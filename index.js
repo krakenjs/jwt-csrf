@@ -18,7 +18,7 @@ function isLoggedIn(req){
  *
  * 3. Take encrypted value from step #2 and use jwt.encode
  *
- * 4. Set it in req.headers['X-CSRF-JWT']
+ * 4. Set it in req.headers['x-csrf-jwt']
  *
  * 5. return result from from step #3.
  *
@@ -50,7 +50,7 @@ function create(secret, req, res){
 
 
     var jwtCsrf = jwt.encode(encryptedPayload, secret);
-    res.setHeader('X-CSRF-JWT', jwtCsrf);
+    res.setHeader('x-csrf-jwt', jwtCsrf);
 
     return jwtCsrf;
 }
@@ -59,7 +59,7 @@ function create(secret, req, res){
  * Verifies JWT token in req headers
  * ----------------------------------------
  *
- * 1. If the request is POST, then get the jwt from headers['X-CSRF-JWT]. If token is not present then send a 401 response.
+ * 1. If the request is POST, then get the jwt from headers['x-csrf-jwt]. If token is not present then send a 401 response.
  *
  * 2. Try decoding JWT. JWT decoding logic will throw error if the payload does not match the encrypted value.
  * JWT is a self verifying token. If decoding throws error then send a 401.
@@ -77,7 +77,7 @@ function create(secret, req, res){
 
 function validate(secret, req){
 
-    var token = req.headers && req.headers['X-CSRF-JWT'];
+    var token = req.headers && req.headers['x-csrf-jwt'];
 
     //If the jwtToken is not send in header, then send a 401.
     if(!token){

@@ -131,7 +131,7 @@ describe('validate Tests', function(){
 
         var req = {
             headers : {
-                'X-CSRF-JWT': jwtString,
+                'x-csrf-jwt': jwtString,
                 'user-agent': userAgent
             }
         };
@@ -150,7 +150,7 @@ describe('validate Tests', function(){
 
         var req = {
             headers : {
-                'X-CSRF-JWT': jwtString,
+                'x-csrf-jwt': jwtString,
                 'user-agent': userAgent
             }
         };
@@ -169,7 +169,7 @@ describe('validate Tests', function(){
 
         var req = {
             headers : {
-                'X-CSRF-JWT': jwtString,
+                'x-csrf-jwt': jwtString,
                 'user-agent': userAgent
             }
         };
@@ -188,7 +188,7 @@ describe('validate Tests', function(){
 
         var req = {
             headers : {
-                'X-CSRF-JWT': jwtString,
+                'x-csrf-jwt': jwtString,
                 'user-agent': userAgent
             },
             user: {
@@ -210,7 +210,7 @@ describe('validate Tests', function(){
 
         var req = {
             headers : {
-                'X-CSRF-JWT': jwtString,
+                'x-csrf-jwt': jwtString,
                 'user-agent': userAgent
             },
             user: {
@@ -232,7 +232,7 @@ describe('validate Tests', function(){
 
         var req = {
             headers : {
-                'X-CSRF-JWT': jwtString,
+                'x-csrf-jwt': jwtString,
                 'user-agent': userAgent
             }
         };
@@ -251,7 +251,7 @@ describe('validate Tests', function(){
 
         var req = {
             headers : {
-                'X-CSRF-JWT': jwtString,
+                'x-csrf-jwt': jwtString,
                 'user-agent': userAgent
             },
             user: {
@@ -273,7 +273,7 @@ describe('validate Tests', function(){
 
         var req = {
             headers : {
-                'X-CSRF-JWT': jwtString,
+                'x-csrf-jwt': jwtString,
                 'user-agent': userAgent
             }
         };
@@ -298,7 +298,7 @@ describe('validate Tests', function(){
 
         var req = {
             headers : {
-                'X-CSRF-JWT': jwtString,
+                'x-csrf-jwt': jwtString,
                 'user-agent': "RandomHeader"
             }
         };
@@ -326,7 +326,7 @@ describe('validate Tests', function(){
 
         var req = {
             headers : {
-                'X-CSRF-JWT': ecryptedToken,
+                'x-csrf-jwt': ecryptedToken,
                 'user-agent': "RandomHeader"
             }
         };
