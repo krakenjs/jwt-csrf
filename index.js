@@ -3,6 +3,10 @@ var encrypt = require('./lib').encrypt;
 var decrypt = require('./lib').decrypt;
 var onHeaders = require('on-headers');
 
+var errCodes = {
+    INVALID_TOKEN: "INVALID_JWT_CSRF"
+}
+
 function isLoggedIn(req){
     return req.user ? true: false;
 }
@@ -57,11 +61,11 @@ function create(options, req){
         token: encrypt(options.secret, payload)
     };
 
-    //var jwtOptions = {
-    //    expiresInMinutes: expiry
-    //};
+    var jwtOptions = {
+        expiresInMinutes: expiry
+    };
 
-    var jwtCsrf = jsonwebtoken.sign(encryptedPayload, options.secret);
+    var jwtCsrf = jsonwebtoken.sign(encryptedPayload, options.secret, jwtOptions);
 
     return jwtCsrf;
 }
@@ -146,6 +150,7 @@ function validate(options, req, callback) {
 }
 module.exports = {
 
+    errCodes: errCodes,
     create: create,
     validate: validate,
 
@@ -167,7 +172,8 @@ module.exports = {
             if(req.method !== 'GET') {
                 validate(options, req, function(err, result){
                     if(err || !result){
-                       return res.send(401, 'Invalid token');
+                        res.status(401);
+                        next(new Error(errCodes.INVALID_TOKEN));
                     }
                 });
             }

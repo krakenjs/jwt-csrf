@@ -344,7 +344,7 @@ describe('validate Tests', function(){
     });
 
 
-    it('Should send 401 for non happy case', function(done){
+    it('Should set 401 status and call next(err) for non happy case', function(done){
 
         var token = constructToken();
         var ecryptedToken = {
@@ -362,15 +362,16 @@ describe('validate Tests', function(){
 
         var next = sinon.spy();
         var res = {
-            send: sinon.spy()
+            status: sinon.spy()
         }
 
         var middleware = jwtCsrf.checkJwt(options);
 
         middleware(req, res, next);
 
-        assert(res.send.calledWith(401), 'Expect next() to be called');
-
+        assert(res.status.calledWith(401), 'Expect status 401 to be set');
+        assert(next.args.toString(),
+            "Expect next() called with err");
         done();
 
     });
