@@ -91,7 +91,7 @@ Returns a middlware function which takes `req`, `res`, `next`. Sets the JWT in r
 
 Returns a middlware function which takes `req`, `res`, `next`. Internally calls validate api (above).
 
-If validation succeeds calls `next`. Else, sends 401: `res.send(401`
+If validation succeeds calls `next`. Else, does `res.status(401)` calls `next` with a error.
 
 
 ## Testing
