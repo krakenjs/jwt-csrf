@@ -12,7 +12,7 @@ Can be used as simple API or a middleware. Internally uses `jwt-simple` and `cry
 Usage:
 
 ```
- var token = create(SECRET, req);
+ var token = create(SECRET, req, res);
 
 ```
 
@@ -24,7 +24,7 @@ Usage:
 
   3. Take encrypted value from step #2 and use jwt.encode
 
-  4. Set it in `req.headers['X-CSRF-JWT']`
+  4. Set it in `res.headers['X-CSRF-JWT']`
 
   5. return result from from step #3.
 
@@ -65,7 +65,8 @@ Checks for JWT in `req.headers['X-CSRF-JWT']`
 
  ```
 
-Returns a middlware function which takes `req`, `res`, `next`. Sets the JWT in req headers under `req.headers['X-CSRF-JWT']`
+Returns a middlware function which takes `req`, `res`, `next`. Sets the JWT in req headers under `res
+.headers['X-CSRF-JWT']`
 
 
 ### validateJWT:

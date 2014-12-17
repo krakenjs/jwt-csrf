@@ -20,13 +20,17 @@ describe('create jwt Tests', function(){
                 'user-agent': 'Mozilla'
             }
         };
-        var token = jwtCsrf.create(SECRET, req);
+        var res = {
+            headers: {}
+        };
+
+        var token = jwtCsrf.create(SECRET, req, res);
         var decodedToken = jwt.decode(token, SECRET);
         var plainText = lib.decrypt(SECRET, decodedToken);
 
         var split = plainText.split(":");
         assert(split && split.length === 3 , 'Assert the decrypted jwt to have 3 fields');
-        assert(req.headers['X-CSRF-JWT'], 'Expect jwt to be set in headers');
+        assert(res.headers['X-CSRF-JWT'], 'Expect jwt to be set in headers');
         done();
 
     });
@@ -41,14 +45,18 @@ describe('create jwt Tests', function(){
                 encryptedAccountNumber: 123443223432
             }
         };
-        var token = jwtCsrf.create(SECRET, req);
+        var res = {
+            headers: {}
+        };
+
+        var token = jwtCsrf.create(SECRET, req, res);
         var decodedToken = jwt.decode(token, SECRET);
         var plainText = lib.decrypt(SECRET, decodedToken);
 
         var split = plainText.split(":");
         assert(split && split.length === 4 , 'Assert the decrypted jwt to have 3 fields');
         assert(split[3] === req.user.encryptedAccountNumber.toString(), 'Assert the payerId in the token');
-        assert(req.headers['X-CSRF-JWT'], 'Expect jwt to be set in headers');
+        assert(res.headers['X-CSRF-JWT'], 'Expect jwt to be set in headers');
         done();
 
     });
@@ -64,14 +72,17 @@ describe('create jwt Tests', function(){
             }
         };
 
+        var res = {
+            headers: {}
+        };
         var next = sinon.spy();
 
         var middleware = jwtCsrf.setJwt(SECRET);
 
-        middleware(req, {}, next);
+        middleware(req, res, next);
 
         assert(next.called, 'Expect next() to be called');
-        assert(req.headers['X-CSRF-JWT'], 'Expect jwt to be set in headers');
+        assert(res.headers['X-CSRF-JWT'], 'Expect jwt to be set in headers');
         done();
 
     });
