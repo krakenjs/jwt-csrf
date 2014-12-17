@@ -24,7 +24,7 @@ Usage:
 
   3. Take encrypted value from step #2 and use jwt.encode
 
-  4. Set it in `res.headers['X-CSRF-JWT']`
+  4. Set it in `res.setHeader('X-CSRF-JWT', jwtCsrf);`
 
   5. return result from from step #3.
 
@@ -65,8 +65,7 @@ Checks for JWT in `req.headers['X-CSRF-JWT']`
 
  ```
 
-Returns a middlware function which takes `req`, `res`, `next`. Sets the JWT in req headers under `res
-.headers['X-CSRF-JWT']`
+Returns a middlware function which takes `req`, `res`, `next`. Sets the JWT in req headers under `'X-CSRF-JWT'`
 
 
 ### validateJWT:

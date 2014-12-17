@@ -21,7 +21,7 @@ describe('create jwt Tests', function(){
             }
         };
         var res = {
-            headers: {}
+            setHeader: sinon.spy()
         };
 
         var token = jwtCsrf.create(SECRET, req, res);
@@ -30,7 +30,7 @@ describe('create jwt Tests', function(){
 
         var split = plainText.split(":");
         assert(split && split.length === 3 , 'Assert the decrypted jwt to have 3 fields');
-        assert(res.headers['X-CSRF-JWT'], 'Expect jwt to be set in headers');
+        assert(res.setHeader.called, 'Expect jwt to be set in headers');
         done();
 
     });
@@ -46,8 +46,8 @@ describe('create jwt Tests', function(){
             }
         };
         var res = {
-            headers: {}
-        };
+            setHeader: sinon.spy()
+        }
 
         var token = jwtCsrf.create(SECRET, req, res);
         var decodedToken = jwt.decode(token, SECRET);
@@ -56,7 +56,7 @@ describe('create jwt Tests', function(){
         var split = plainText.split(":");
         assert(split && split.length === 4 , 'Assert the decrypted jwt to have 3 fields');
         assert(split[3] === req.user.encryptedAccountNumber.toString(), 'Assert the payerId in the token');
-        assert(res.headers['X-CSRF-JWT'], 'Expect jwt to be set in headers');
+        assert(res.setHeader.called, 'Expect jwt to be set in headers');
         done();
 
     });
@@ -73,8 +73,8 @@ describe('create jwt Tests', function(){
         };
 
         var res = {
-            headers: {}
-        };
+            setHeader: sinon.spy()
+        }
         var next = sinon.spy();
 
         var middleware = jwtCsrf.setJwt(SECRET);
@@ -82,7 +82,7 @@ describe('create jwt Tests', function(){
         middleware(req, res, next);
 
         assert(next.called, 'Expect next() to be called');
-        assert(res.headers['X-CSRF-JWT'], 'Expect jwt to be set in headers');
+        assert(res.setHeader.called, 'Expect jwt to be set in headers');
         done();
 
     });

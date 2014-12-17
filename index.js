@@ -50,7 +50,7 @@ function create(secret, req, res){
 
 
     var jwtCsrf = jwt.encode(encryptedPayload, secret);
-    res.headers['X-CSRF-JWT'] = jwtCsrf;
+    res.setHeader('X-CSRF-JWT', jwtCsrf);
 
     return jwtCsrf;
 }
