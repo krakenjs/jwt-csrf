@@ -28,7 +28,7 @@ function isLoggedIn(req){
  * @param secret
  * @returns {Function}
  */
-function create(secret, req, res){
+function create(secret, req){
     var payload;
     var d = new Date();
 
@@ -50,7 +50,6 @@ function create(secret, req, res){
 
 
     var jwtCsrf = jwt.encode(encryptedPayload, secret);
-    res.setHeader('x-csrf-jwt', jwtCsrf);
 
     return jwtCsrf;
 }
@@ -138,7 +137,9 @@ module.exports = {
     setJwt: function(secret){
         return function (req, res, next){
             onHeaders(res, function() {
-                create(secret, req, res);
+                var jwtCsrf = create(secret, req);
+                res.setHeader('x-csrf-jwt', jwtCsrf);
+
             });
 
             next();

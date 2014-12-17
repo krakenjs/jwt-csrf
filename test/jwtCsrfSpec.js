@@ -20,17 +20,13 @@ describe('create jwt Tests', function(){
                 'user-agent': 'Mozilla'
             }
         };
-        var res = {
-            setHeader: sinon.spy()
-        };
 
-        var token = jwtCsrf.create(SECRET, req, res);
+        var token = jwtCsrf.create(SECRET, req);
         var decodedToken = jwt.decode(token, SECRET);
         var plainText = lib.decrypt(SECRET, decodedToken);
 
         var split = plainText.split(":");
         assert(split && split.length === 3 , 'Assert the decrypted jwt to have 3 fields');
-        assert(res.setHeader.called, 'Expect jwt to be set in headers');
         done();
 
     });
@@ -45,18 +41,14 @@ describe('create jwt Tests', function(){
                 encryptedAccountNumber: 123443223432
             }
         };
-        var res = {
-            setHeader: sinon.spy()
-        }
 
-        var token = jwtCsrf.create(SECRET, req, res);
+        var token = jwtCsrf.create(SECRET, req);
         var decodedToken = jwt.decode(token, SECRET);
         var plainText = lib.decrypt(SECRET, decodedToken);
 
         var split = plainText.split(":");
         assert(split && split.length === 4 , 'Assert the decrypted jwt to have 3 fields');
         assert(split[3] === req.user.encryptedAccountNumber.toString(), 'Assert the payerId in the token');
-        assert(res.setHeader.called, 'Expect jwt to be set in headers');
         done();
 
     });
