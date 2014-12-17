@@ -4,7 +4,7 @@ var decrypt = require('./lib').decrypt;
 var onHeaders = require('on-headers');
 
 var errCodes = {
-    INVALID_TOKEN: "INVALID_JWT_CSRF"
+    INVALID_TOKEN: "EINVALIDCSRF"
 }
 
 function isLoggedIn(req){
@@ -173,7 +173,9 @@ module.exports = {
                 validate(options, req, function(err, result){
                     if(err || !result){
                         res.status(401);
-                        next(new Error(errCodes.INVALID_TOKEN));
+                        var err = new Error('Invalid CSRF token');
+                        err.code = errCodes.INVALID_TOKEN;
+                        next(err);
                     }
                 });
             }
