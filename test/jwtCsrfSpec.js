@@ -73,14 +73,15 @@ describe('create jwt Tests', function(){
         };
 
         var res = {
-            setHeader: sinon.spy()
+            setHeader: sinon.spy(),
+            writeHead : function(){},
         }
         var next = sinon.spy();
 
         var middleware = jwtCsrf.setJwt(SECRET);
 
         middleware(req, res, next);
-
+        res.writeHead();
         assert(next.called, 'Expect next() to be called');
         assert(res.setHeader.called, 'Expect jwt to be set in headers');
         done();
@@ -317,7 +318,7 @@ describe('validate Tests', function(){
 
     });
 
-    it('Should send 401 for invlid token', function(done){
+    it('Should send 401 for invalid token', function(done){
 
         var token = constructToken();
         var ecryptedToken = lib.encrypt(SECRET, token);

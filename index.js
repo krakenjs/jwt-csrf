@@ -1,7 +1,7 @@
 var jwt = require('jwt-simple');
 var encrypt = require('./lib').encrypt;
 var decrypt = require('./lib').decrypt;
-
+var onHeaders = require('on-headers');
 
 function isLoggedIn(req){
     return req.user ? true: false;
@@ -137,7 +137,10 @@ module.exports = {
     //Returns a jwt middleware
     setJwt: function(secret){
         return function (req, res, next){
-            create(secret, req, res);
+            onHeaders(res, function() {
+                create(secret, req, res);
+            });
+
             next();
         }
     },
