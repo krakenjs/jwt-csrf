@@ -1,4 +1,4 @@
-var jwt = require('jwt-simple');
+var jsonwebtoken = require('jsonwebtoken');
 var encrypt = require('./lib').encrypt;
 var decrypt = require('./lib').decrypt;
 var onHeaders = require('on-headers');
@@ -11,12 +11,14 @@ function isLoggedIn(req){
  * Constructs a jwt which would be dropped in res headers on every outgoing response.
  *
  * 1. Construct the token.
- *      Format (for logged in cases): expiry:randomNum:userAgent:payerId
- *      Format (for non logged in cases): expiry:randomNum:userAgent
+ *      Format (for logged in cases): userAgent:payerId
+ *      Format (for non logged in cases): userAgent
  *
- * 2. Encrypt the token using crypto module, with key from vault:encrypted_csrftoken_crypt_key
+ * 2. Encrypt the token using crypto module, with a secret provided in options
  *
- * 3. Take encrypted value from step #2 and use jwt.encode
+ * 3. Take encrypted value from step #2 and use jsonwebtoken.encode.
+ *    If options does not have expiresInMinutes, its defaulted to 20mins.
+ *
  *
  * 4. Set it in req.headers['x-csrf-jwt']
  *
@@ -25,19 +27,24 @@ function isLoggedIn(req){
  *
  *
  *
- * @param secret
+ * @param options   {secret:*, expiresInMinutes: number}
  * @returns {Function}
  */
-function create(secret, req){
+function create(options, req){
     var payload;
-    var d = new Date();
+    var expiry;
 
-    //Set expiry to 20 mins from current time.
-    var expiry = d.getTime() + (20 * 60 * 1000);
-    var randomNum = Math.floor(Math.random()*1000001);
+    if(options.expiresInMinutes){
+        expiry = options.expiresInMinutes;
+    } else{
+        //Set expiry to 20 mins from current time.
+        expiry = 20;
+    }
+
+
     var userAgent = req.headers && req.headers['user-agent'];
 
-    var data = [expiry, randomNum, userAgent];
+    var data = [userAgent];
 
     if(isLoggedIn(req)){
         var payerId =  req.user.encryptedAccountNumber;
@@ -46,10 +53,15 @@ function create(secret, req){
 
     payload = data.join(":");
 
-    var encryptedPayload = encrypt(secret, payload);
+    var encryptedPayload = {
+        token: encrypt(options.secret, payload)
+    };
 
+    //var jwtOptions = {
+    //    expiresInMinutes: expiry
+    //};
 
-    var jwtCsrf = jwt.encode(encryptedPayload, secret);
+    var jwtCsrf = jsonwebtoken.sign(encryptedPayload, options.secret);
 
     return jwtCsrf;
 }
@@ -61,7 +73,7 @@ function create(secret, req){
  * 1. If the request is POST, then get the jwt from headers['x-csrf-jwt]. If token is not present then send a 401 response.
  *
  * 2. Try decoding JWT. JWT decoding logic will throw error if the payload does not match the encrypted value.
- * JWT is a self verifying token. If decoding throws error then send a 401.
+ *  JWT is a self verifying token. If decoding throws error then send a 401.
  *
  * 3. If this is a logged in user, decrypt the payload. For logged in case descrypted payload will be of the form
  *    expiry:randomToken:user-agent:payerId.
@@ -69,90 +81,96 @@ function create(secret, req){
  *    Verify payerId from above decrypted value with the payerId from user's payerId.
  *
  *
+ * Takes a callback. callback will be called with err if there is any error in decryption. Or else it will be called with
+ * callback(null, result). result could be true or false depending on whether validation succeeds or fails.
  *
  * @param options
- * @returns {Function}
+ *
  */
 
-function validate(secret, req){
+function validate(options, req, callback) {
 
     var token = req.headers && req.headers['x-csrf-jwt'];
 
     //If the jwtToken is not send in header, then send a 401.
-    if(!token){
-        return false;
-    };
+    if (!token) {
+        return callback(null, false);
+    }
 
-    var payload;
-    var userAgent = req.headers['user-agent'];
+    var secret = options.secret;
 
     //If token is invalid this would throw error. We catch it and send 401 response.
-    payload = jwt.decode(token, secret);
-
-    var decryptedPayload = decrypt(secret, payload);
-
-    //Expected format for decryptedPayLoad is randomToken:payerId:user-agent
-    var split = decryptedPayload.split(":");
-
-    if(!split || split.length < 3){
-        return false;
-    }
-
-    var userAgentInToken  = split[2];
-
-    if(userAgentInToken !== userAgent){
-        return false;
-    }
-
-    //Check token expiry
-    var expiry = parseInt(split[0]);
-    var currentDate = new Date();
-
-    if(expiry <= currentDate.getTime() ){
-        return false;
-    }
-
-    //If this is a authenticated user, then verify the payerId in jwtToken with payerId in req.user.
-    if(isLoggedIn(req)){
-        if(split.length !== 4){
-            return false;
+    jsonwebtoken.verify(token, secret, function (err, payload) {
+        if(err){
+            return callback(err);
         }
-        //Check payerId in token
-        var inputPayerId = split[3];
-        var userPayerId = req.user.encryptedAccountNumber;
-        if(inputPayerId !== userPayerId) {
-            return false;
-        }
-    }
+        var decryptedPayload;
 
-    return true;
+        try{
+            decryptedPayload = decrypt(secret, payload.token);
+        } catch (err){
+            return callback(err);
+        }
+
+        var userAgent = req.headers['user-agent'];
+
+        //Expected format for decryptedPayLoad is randomToken:payerId:user-agent
+        var split = decryptedPayload.split(":");
+
+        if (!split || split.length < 1) {
+            return callback(null, false);
+        }
+
+        var userAgentInToken = split[0];
+        if (userAgentInToken !== userAgent) {
+            return callback(null, false);
+        }
+
+        //If this is a authenticated user, then verify the payerId in jwtToken with payerId in req.user.
+        if (isLoggedIn(req)) {
+            if (split.length !== 2) {
+                return callback(null, false);
+            }
+            //Check payerId in token
+            var inputPayerId = split[1];
+            var userPayerId = req.user.encryptedAccountNumber;
+            if (inputPayerId !== userPayerId) {
+                return callback(null, false);
+            }
+        }
+        return callback(null, true);
+
+    });
+
 }
-
 module.exports = {
 
     create: create,
     validate: validate,
 
     //Returns a jwt middleware
-    setJwt: function(secret){
+    setJwt: function(options){
         return function (req, res, next){
             onHeaders(res, function() {
-                var jwtCsrf = create(secret, req);
+                var jwtCsrf = create(options, req);
                 res.setHeader('x-csrf-jwt', jwtCsrf);
-
             });
 
             next();
         }
     },
 
-    checkJwt: function(secret){
+    checkJwt: function(options){
         return function(req, res, next){
-            try {
-                (req.method !== 'GET') && !validate(secret, req) ? res.send(401, 'Invalid token') : next()
-            } catch(err){
-                res.send(401, 'Invalid token');
+
+            if(req.method !== 'GET') {
+                validate(options, req, function(err, result){
+                    if(err || !result){
+                       return res.send(401, 'Invalid token');
+                    }
+                });
             }
+            next();
 
         }
     }

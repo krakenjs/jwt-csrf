@@ -5,29 +5,37 @@ var sinon = require('sinon');
 var assert = require('chai').assert;
 
 
+var jsonwebtoken = require('jsonwebtoken');
 var jwtCsrf = require('../index');
-var jwt = require('jwt-simple');
 
 describe('create jwt Tests', function(){
 
     var SECRET = "somerandomsecret";
-
+    var userAgent = 'Mozilla';
 
     it('test No login case', function(done){
 
         var req = {
             headers : {
-                'user-agent': 'Mozilla'
+                'user-agent': userAgent
             }
         };
 
-        var token = jwtCsrf.create(SECRET, req);
-        var decodedToken = jwt.decode(token, SECRET);
-        var plainText = lib.decrypt(SECRET, decodedToken);
+        var options = {
+            secret : SECRET,
+            expiresInMinutes: 20
+        }
 
-        var split = plainText.split(":");
-        assert(split && split.length === 3 , 'Assert the decrypted jwt to have 3 fields');
-        done();
+        var data = jwtCsrf.create(options, req);
+
+        jsonwebtoken.verify(data, SECRET, function(err, decoded) {
+            var plainText = lib.decrypt(SECRET, decoded.token);
+            var split = plainText.split(":");
+            assert(split && split.length === 1 , 'Assert the decrypted jwt to have 1 field');
+            assert(split[0] === userAgent, 'Expect payload to have right user agent');
+            done();
+        });
+
 
     });
 
@@ -35,42 +43,55 @@ describe('create jwt Tests', function(){
 
         var req = {
             headers : {
-                'user-agent': 'Mozilla'
+                'user-agent': userAgent
             },
             user: {
                 encryptedAccountNumber: 123443223432
             }
         };
 
-        var token = jwtCsrf.create(SECRET, req);
-        var decodedToken = jwt.decode(token, SECRET);
-        var plainText = lib.decrypt(SECRET, decodedToken);
+        var options = {
+            secret : SECRET
+        }
 
-        var split = plainText.split(":");
-        assert(split && split.length === 4 , 'Assert the decrypted jwt to have 3 fields');
-        assert(split[3] === req.user.encryptedAccountNumber.toString(), 'Assert the payerId in the token');
-        done();
+        var data = jwtCsrf.create(options, req);
+
+        jsonwebtoken.verify(data, SECRET, function(err, decoded) {
+            var plainText = lib.decrypt(SECRET, decoded.token);
+            var split = plainText.split(":");
+            assert(split && split.length === 2 , 'Assert the decrypted jwt to have 1 field');
+            assert(split[1] === req.user.encryptedAccountNumber.toString(), 'Assert the payerId in the token');
+            done();
+        });
+
 
     });
+
 
     it('Should call next for happy case', function(done){
 
         var req = {
             headers : {
-                'user-agent': 'Mozilla'
+                'user-agent': userAgent
             },
             user: {
                 encryptedAccountNumber: 123443223432
             }
         };
 
+        var options = {
+            secret : SECRET,
+            expiresInMinutes: 20
+        };
+
         var res = {
             setHeader: sinon.spy(),
-            writeHead : function(){},
-        }
+            writeHead : function(){}
+        };
+
         var next = sinon.spy();
 
-        var middleware = jwtCsrf.setJwt(SECRET);
+        var middleware = jwtCsrf.setJwt(options);
 
         middleware(req, res, next);
         res.writeHead();
@@ -88,13 +109,12 @@ describe('validate Tests', function(){
 
     var userAgent = 'Mozilla';
 
-    function constructToken(expired, customAgent, payerId){
-        var d = new Date();
-        var time = d.getTime();
+    var options = {
+        secret: SECRET
+    }
 
+    function constructToken(customAgent, payerId){
         var data = [
-            expired ? time : time + (20 * 60 * 1000),
-            3252466252,
             customAgent || userAgent
         ]
 
@@ -110,77 +130,102 @@ describe('validate Tests', function(){
                 'user-agent': userAgent
             }
         };
-        assert(!jwtCsrf.validate(SECRET, req) , 'Expect verification to fail');
-        done();
+
+        jwtCsrf.validate(options, req, function(err, data){
+            assert(!data , 'Expect verification to fail');
+            done();
+        })
+
+
 
     });
 
-    it('Should fail if less than 3 fields in token', function(done){
+    it('Should fail if less than 1 field in token', function(done){
 
-        var token = "213:sdfdasfsadfas";
-        var ecryptedToken = lib.encrypt(SECRET, token);
-        var jwtString = jwt.encode(ecryptedToken, SECRET);
+        var token = "";
+        var ecryptedToken = {
+           token: lib.encrypt(SECRET, token)
+        };
+
+        var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
 
         var req = {
             headers : {
-                'x-csrf-jwt': jwtString,
+                'x-csrf-jwt': jwtData,
                 'user-agent': userAgent
             }
         };
 
-        assert(!jwtCsrf.validate(SECRET, req) , 'Expect verification to fail');
-
-        done();
+        jwtCsrf.validate(options, req, function(err, data){
+            assert(!data , 'Expect verification to fail');
+            done();
+        })
 
     });
 
     it('Should fail for mismatch useragent', function(done){
 
-        var token = constructToken(false, 'Chrome');
-        var ecryptedToken = lib.encrypt(SECRET, token);
-        var jwtString = jwt.encode(ecryptedToken, SECRET);
+        var token = constructToken('Chrome');
+        var ecryptedToken = {
+            token: lib.encrypt(SECRET, token)
+        };
+
+        var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
 
         var req = {
             headers : {
-                'x-csrf-jwt': jwtString,
+                'x-csrf-jwt': jwtData,
                 'user-agent': userAgent
             }
         };
 
-        assert(!jwtCsrf.validate(SECRET, req) , 'Assert verification to fail');
-
-        done();
+        jwtCsrf.validate(options, req, function(err, data){
+            assert(!data , 'Expect verification to fail');
+            done();
+        })
 
     });
+
 
     it('Should fail for expired token', function(done){
 
-        var token = constructToken(true);
-        var ecryptedToken = lib.encrypt(SECRET, token);
-        var jwtString = jwt.encode(ecryptedToken, SECRET);
+        var token = "testing";
+        var ecryptedToken = {
+            token: lib.encrypt(SECRET, token)
+        };
+
+        var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET, {
+            expiresInMinutes: -1
+        });
 
         var req = {
             headers : {
-                'x-csrf-jwt': jwtString,
+                'x-csrf-jwt': jwtData,
                 'user-agent': userAgent
             }
         };
 
-        assert(!jwtCsrf.validate(SECRET, req) , 'Assert verification to fail');
 
-        done();
+        jwtCsrf.validate(options, req, function(err, data){
+            assert(!data , 'Expect verification to fail');
+            done();
+        })
 
     });
+
 
     it('Should fail for missing payer Id in loggedin case', function(done){
 
         var token = constructToken();
-        var ecryptedToken = lib.encrypt(SECRET, token);
-        var jwtString = jwt.encode(ecryptedToken, SECRET);
+        var ecryptedToken = {
+            token: lib.encrypt(SECRET, token)
+        };
+
+        var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
 
         var req = {
             headers : {
-                'x-csrf-jwt': jwtString,
+                'x-csrf-jwt': jwtData,
                 'user-agent': userAgent
             },
             user: {
@@ -188,62 +233,75 @@ describe('validate Tests', function(){
             }
         };
 
-        assert(!jwtCsrf.validate(SECRET, req) , 'Assert verification to fail');
-
-        done();
+        jwtCsrf.validate(options, req, function(err, data){
+            assert(!data , 'Expect verification to fail');
+            done();
+        })
 
     });
 
     it('Should fail for mismatched payer Id in loggedin case', function(done){
 
-        var token = constructToken(false, userAgent, 1234);
-        var ecryptedToken = lib.encrypt(SECRET, token);
-        var jwtString = jwt.encode(ecryptedToken, SECRET);
+        var token = constructToken(userAgent, "1234");
+        var ecryptedToken = {
+            token: lib.encrypt(SECRET, token)
+        };
+
+        var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
 
         var req = {
             headers : {
-                'x-csrf-jwt': jwtString,
+                'x-csrf-jwt': jwtData,
                 'user-agent': userAgent
             },
             user: {
-                encryptedAccountNumber: 123443223432
+                encryptedAccountNumber: "123443223432"
             }
         };
 
-        assert(!jwtCsrf.validate(SECRET, req) , 'Assert verification to fail');
+        jwtCsrf.validate(options, req, function(err, data){
+            assert(!data , 'Expect verification to fail');
+            done();
+        })
 
-        done();
 
     });
 
     it('Should work for No login happy case', function(done){
 
         var token = constructToken();
-        var ecryptedToken = lib.encrypt(SECRET, token);
-        var jwtString = jwt.encode(ecryptedToken, SECRET);
+        var ecryptedToken = {
+            token: lib.encrypt(SECRET, token)
+        };
+
+        var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
 
         var req = {
             headers : {
-                'x-csrf-jwt': jwtString,
+                'x-csrf-jwt': jwtData,
                 'user-agent': userAgent
             }
         };
 
-        assert(jwtCsrf.validate(SECRET, req) , 'Assert verification to succeed');
-
-        done();
-
+        jwtCsrf.validate(options, req, function(err, data){
+            assert(data , 'Expect verification to succeed');
+            done();
+        })
     });
+
 
     it('Should work for login happy case', function(done){
 
-        var token = constructToken(false, userAgent, "1234");
-        var ecryptedToken = lib.encrypt(SECRET, token);
-        var jwtString = jwt.encode(ecryptedToken, SECRET);
+        var token = constructToken(userAgent, "1234");
+        var ecryptedToken = {
+            token: lib.encrypt(SECRET, token)
+        };
+
+        var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
 
         var req = {
             headers : {
-                'x-csrf-jwt': jwtString,
+                'x-csrf-jwt': jwtData,
                 'user-agent': userAgent
             },
             user: {
@@ -251,28 +309,31 @@ describe('validate Tests', function(){
             }
         };
 
-        assert(jwtCsrf.validate(SECRET, req) , 'Assert verification to succeed');
-
-        done();
-
+        jwtCsrf.validate(options, req, function(err, data){
+            assert(data , 'Expect verification to succeed');
+            done();
+        })
     });
 
     it('Should call next for happy case', function(done){
 
         var token = constructToken();
-        var ecryptedToken = lib.encrypt(SECRET, token);
-        var jwtString = jwt.encode(ecryptedToken, SECRET);
+        var ecryptedToken = {
+            token: lib.encrypt(SECRET, token)
+        };
+
+        var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
 
         var req = {
             headers : {
-                'x-csrf-jwt': jwtString,
+                'x-csrf-jwt': jwtData,
                 'user-agent': userAgent
             }
         };
 
         var next = sinon.spy();
 
-        var middleware = jwtCsrf.checkJwt(SECRET);
+        var middleware = jwtCsrf.checkJwt(options);
 
         middleware(req, {}, next);
 
@@ -282,15 +343,19 @@ describe('validate Tests', function(){
 
     });
 
+
     it('Should send 401 for non happy case', function(done){
 
         var token = constructToken();
-        var ecryptedToken = lib.encrypt(SECRET, token);
-        var jwtString = jwt.encode(ecryptedToken, SECRET);
+        var ecryptedToken = {
+            token: lib.encrypt(SECRET, token)
+        };
+
+        var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
 
         var req = {
             headers : {
-                'x-csrf-jwt': jwtString,
+                'x-csrf-jwt': jwtData,
                 'user-agent': "RandomHeader"
             }
         };
@@ -300,35 +365,7 @@ describe('validate Tests', function(){
             send: sinon.spy()
         }
 
-        var middleware = jwtCsrf.checkJwt(SECRET);
-
-        middleware(req, res, next);
-
-        assert(res.send.calledWith(401), 'Expect next() to be called');
-
-        done();
-
-    });
-
-    it('Should send 401 for invalid token', function(done){
-
-        var token = constructToken();
-        var ecryptedToken = lib.encrypt(SECRET, token);
-
-
-        var req = {
-            headers : {
-                'x-csrf-jwt': ecryptedToken,
-                'user-agent': "RandomHeader"
-            }
-        };
-
-        var next = sinon.spy();
-        var res = {
-            send: sinon.spy()
-        }
-
-        var middleware = jwtCsrf.checkJwt(SECRET);
+        var middleware = jwtCsrf.checkJwt(options);
 
         middleware(req, res, next);
 
