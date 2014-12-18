@@ -55,7 +55,7 @@ function create(options, req){
         data.push(payerId);
     }
 
-    payload = data.join(":");
+    payload = data.join("::");
 
     var encryptedPayload = {
         token: encrypt(options.secret, payload)
@@ -116,11 +116,10 @@ function validate(options, req, callback) {
         } catch (err){
             return callback(err);
         }
-
         var userAgent = req.headers['user-agent'];
 
         //Expected format for decryptedPayLoad is randomToken:payerId:user-agent
-        var split = decryptedPayload.split(":");
+        var split = decryptedPayload.split("::");
 
         if (!split || split.length < 1) {
             return callback(null, false);

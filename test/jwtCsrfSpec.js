@@ -58,7 +58,7 @@ describe('create jwt Tests', function(){
 
         jsonwebtoken.verify(data, SECRET, function(err, decoded) {
             var plainText = lib.decrypt(SECRET, decoded.token);
-            var split = plainText.split(":");
+            var split = plainText.split("::");
             assert(split && split.length === 2 , 'Assert the decrypted jwt to have 1 field');
             assert(split[1] === req.user.encryptedAccountNumber.toString(), 'Assert the payerId in the token');
             done();
@@ -121,7 +121,7 @@ describe('validate Tests', function(){
         if(payerId){
             data.push(payerId);
         }
-        return data.join(":");
+        return data.join("::");
     }
 
     it('Should fail with no token', function(done){
