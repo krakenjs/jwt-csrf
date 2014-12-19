@@ -1,6 +1,6 @@
 {
   "name": "jwt-csrf",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "A jwt middleware provider for hermes",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,7 @@
     "cover": "istanbul cover _mocha -- -R spec test"
   },
   "dependencies": {
-    "crypto-paypal": "^1.0.1",
+    "cryptutils-paypal": "^1.0.2",
     "jsonwebtoken": "~1.3.0",
     "on-headers": "~1.0.0"
   },

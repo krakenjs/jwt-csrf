@@ -25,7 +25,7 @@ Usage:
 
        Format (for non logged in cases): userAgent
 
-  2. Encrypt the token using `crypto-paypal` module, with `options.secret`
+  2. Encrypt the token using `ppcryptutils` module, with `options.secret` and `options.macKey`
 
   3. Take encrypted value from step #2 and use `jsonwebtoken.sign`
 
@@ -41,7 +41,7 @@ Will return `true` if the token validation succeeds, else returns false.
 
 ```
 
-`options` is json which must contain `secret`.
+`options` is json which must contain `secret` and `macKey`.
 
 
 Checks for JWT in `req.headers['X-CSRF-JWT']`
@@ -72,7 +72,7 @@ callback(null, result). result could be true or false depending on whether valid
 
  ```
 
-`options` is json which must contain `secret` and optional `expiresInMinutes`
+`options` is json which must contain `secret`, `macKey` and an optional `expiresInMinutes`
 
 
 Returns a middlware function which takes `req`, `res`, `next`. Sets the JWT in req headers under `'X-CSRF-JWT'`
@@ -87,7 +87,7 @@ Returns a middlware function which takes `req`, `res`, `next`. Sets the JWT in r
 
  ```
 
-`options` is json which must contain `secret`.
+`options` is json which must contain `secret` and `macKey`.
 
 Returns a middlware function which takes `req`, `res`, `next`. Internally calls validate api (above).
 

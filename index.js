@@ -18,7 +18,7 @@ function isLoggedIn(req){
  *      Format (for logged in cases): userAgent:payerId
  *      Format (for non logged in cases): userAgent
  *
- * 2. Encrypt the token using crypto module, with a secret provided in options
+ * 2. Encrypt the token using ppcryptutils module, with a secret, mackey provided in options
  *
  * 3. Take encrypted value from step #2 and use jsonwebtoken.encode.
  *    If options does not have expiresInMinutes, its defaulted to 20mins.
@@ -31,7 +31,7 @@ function isLoggedIn(req){
  *
  *
  *
- * @param options   {secret:*, expiresInMinutes: number}
+ * @param options   {secret:*, macKey: *, expiresInMinutes: number}
  * @returns {Function}
  */
 function create(options, req){
@@ -58,7 +58,7 @@ function create(options, req){
     payload = data.join("::");
 
     var encryptedPayload = {
-        token: encrypt(options.secret, payload)
+        token: encrypt(options.secret, options.macKey, payload)
     };
 
     var jwtOptions = {
@@ -89,7 +89,7 @@ function create(options, req){
  * Takes a callback. callback will be called with err if there is any error in decryption. Or else it will be called with
  * callback(null, result). result could be true or false depending on whether validation succeeds or fails.
  *
- * @param options
+ * @param options {secret:*, macKey: *}
  *
  */
 
@@ -104,6 +104,7 @@ function validate(options, req, callback) {
 
     var secret = options.secret;
 
+
     //If token is invalid this would throw error. We catch it and send 401 response.
     jsonwebtoken.verify(token, secret, function (err, payload) {
         if(err){
@@ -112,7 +113,7 @@ function validate(options, req, callback) {
         var decryptedPayload;
 
         try{
-            decryptedPayload = decrypt(secret, payload.token);
+            decryptedPayload = decrypt(secret, options.macKey, payload.token);
         } catch (err){
             return callback(err);
         }

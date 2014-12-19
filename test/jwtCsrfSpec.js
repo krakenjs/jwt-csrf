@@ -11,6 +11,8 @@ var jwtCsrf = require('../index');
 describe('create jwt Tests', function(){
 
     var SECRET = "somerandomsecret";
+    var MACKEY = "somerandommac";
+
     var userAgent = 'Mozilla';
 
     it('test No login case', function(done){
@@ -23,13 +25,14 @@ describe('create jwt Tests', function(){
 
         var options = {
             secret : SECRET,
+            macKey: MACKEY,
             expiresInMinutes: 20
         }
 
         var data = jwtCsrf.create(options, req);
 
         jsonwebtoken.verify(data, SECRET, function(err, decoded) {
-            var plainText = lib.decrypt(SECRET, decoded.token);
+            var plainText = lib.decrypt(SECRET, MACKEY, decoded.token);
             var split = plainText.split(":");
             assert(split && split.length === 1 , 'Assert the decrypted jwt to have 1 field');
             assert(split[0] === userAgent, 'Expect payload to have right user agent');
@@ -51,13 +54,14 @@ describe('create jwt Tests', function(){
         };
 
         var options = {
-            secret : SECRET
+            secret : SECRET,
+            macKey: MACKEY
         }
 
         var data = jwtCsrf.create(options, req);
 
         jsonwebtoken.verify(data, SECRET, function(err, decoded) {
-            var plainText = lib.decrypt(SECRET, decoded.token);
+            var plainText = lib.decrypt(SECRET, MACKEY, decoded.token);
             var split = plainText.split("::");
             assert(split && split.length === 2 , 'Assert the decrypted jwt to have 1 field');
             assert(split[1] === req.user.encryptedAccountNumber.toString(), 'Assert the payerId in the token');
@@ -81,6 +85,7 @@ describe('create jwt Tests', function(){
 
         var options = {
             secret : SECRET,
+            macKey: MACKEY,
             expiresInMinutes: 20
         };
 
@@ -106,11 +111,13 @@ describe('create jwt Tests', function(){
 describe('validate Tests', function(){
 
     var SECRET = "somerandomsecret";
+    var MACKEY = "somerandommac";
 
     var userAgent = 'Mozilla';
 
     var options = {
-        secret: SECRET
+        secret: SECRET,
+        macKey: MACKEY
     }
 
     function constructToken(customAgent, payerId){
@@ -144,7 +151,7 @@ describe('validate Tests', function(){
 
         var token = "";
         var ecryptedToken = {
-           token: lib.encrypt(SECRET, token)
+           token: lib.encrypt(SECRET, MACKEY, token)
         };
 
         var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
@@ -167,7 +174,7 @@ describe('validate Tests', function(){
 
         var token = constructToken('Chrome');
         var ecryptedToken = {
-            token: lib.encrypt(SECRET, token)
+            token: lib.encrypt(SECRET, MACKEY, token)
         };
 
         var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
@@ -191,7 +198,7 @@ describe('validate Tests', function(){
 
         var token = "testing";
         var ecryptedToken = {
-            token: lib.encrypt(SECRET, token)
+            token: lib.encrypt(SECRET, MACKEY, token)
         };
 
         var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET, {
@@ -218,7 +225,7 @@ describe('validate Tests', function(){
 
         var token = constructToken();
         var ecryptedToken = {
-            token: lib.encrypt(SECRET, token)
+            token: lib.encrypt(SECRET, MACKEY, token)
         };
 
         var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
@@ -244,7 +251,7 @@ describe('validate Tests', function(){
 
         var token = constructToken(userAgent, "1234");
         var ecryptedToken = {
-            token: lib.encrypt(SECRET, token)
+            token: lib.encrypt(SECRET, MACKEY, token)
         };
 
         var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
@@ -271,7 +278,7 @@ describe('validate Tests', function(){
 
         var token = constructToken();
         var ecryptedToken = {
-            token: lib.encrypt(SECRET, token)
+            token: lib.encrypt(SECRET, MACKEY, token)
         };
 
         var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
@@ -294,7 +301,7 @@ describe('validate Tests', function(){
 
         var token = constructToken(userAgent, "1234");
         var ecryptedToken = {
-            token: lib.encrypt(SECRET, token)
+            token: lib.encrypt(SECRET, MACKEY, token)
         };
 
         var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
@@ -319,7 +326,7 @@ describe('validate Tests', function(){
 
         var token = constructToken();
         var ecryptedToken = {
-            token: lib.encrypt(SECRET, token)
+            token: lib.encrypt(SECRET, MACKEY, token)
         };
 
         var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
@@ -348,7 +355,7 @@ describe('validate Tests', function(){
 
         var token = constructToken();
         var ecryptedToken = {
-            token: lib.encrypt(SECRET, token)
+            token: lib.encrypt(SECRET, MACKEY, token)
         };
 
         var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
