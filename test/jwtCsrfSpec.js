@@ -91,12 +91,13 @@ describe('create jwt Tests', function(){
 
         var res = {
             setHeader: sinon.spy(),
-            writeHead : function(){}
+            writeHead : function(){},
+            status: function(){}
         };
 
         var next = sinon.spy();
 
-        var middleware = jwtCsrf.setJwt(options);
+        var middleware = jwtCsrf.middleware(options);
 
         middleware(req, res, next);
         res.writeHead();
@@ -340,7 +341,7 @@ describe('validate Tests', function(){
 
         var next = sinon.spy();
 
-        var middleware = jwtCsrf.checkJwt(options);
+        var middleware = jwtCsrf.middleware(options);
 
         middleware(req, {}, next);
 
@@ -372,7 +373,7 @@ describe('validate Tests', function(){
             status: sinon.spy()
         }
 
-        var middleware = jwtCsrf.checkJwt(options);
+        var middleware = jwtCsrf.middleware(options);
 
         middleware(req, res, next);
 

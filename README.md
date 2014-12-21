@@ -63,35 +63,25 @@ callback(null, result). result could be true or false depending on whether valid
 
 ## As Middlware:
 
-### setJwt:
-
  Usage
 
  ```
-   var middleware = setJwt(options);
+   var middleware = jwt-csrf.middleware(options);
 
  ```
 
 `options` is json which must contain `secret`, `macKey` and an optional `expiresInMinutes`
 
 
-Returns a middlware function which takes `req`, `res`, `next`. Sets the JWT in req headers under `'X-CSRF-JWT'`
+Returns a middlware function which takes `req`, `res`, `next`.
 
+The middleware sets the JWT in req headers under `'X-CSRF-JWT'`.
 
-### validateJWT:
+It also validates the `'X-CSRF-JWT'` in incoming request. If validation succeeds calls `next`. Else, does `res.status
+(401)`
+calls
+`next` with a error.
 
- Usage
-
- ```
-   var middleware = validateJWT(options);
-
- ```
-
-`options` is json which must contain `secret` and `macKey`.
-
-Returns a middlware function which takes `req`, `res`, `next`. Internally calls validate api (above).
-
-If validation succeeds calls `next`. Else, does `res.status(401)` calls `next` with a error.
 
 
 ## Testing

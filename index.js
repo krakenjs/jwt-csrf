@@ -154,21 +154,16 @@ module.exports = {
     create: create,
     validate: validate,
 
-    //Returns a jwt middleware
-    setJwt: function(options){
-        return function (req, res, next){
+    middleware: function(options){
+        return function(req, res, next){
+
+            //Set jwt in request headers on response out.
             onHeaders(res, function() {
                 var jwtCsrf = create(options, req);
                 res.setHeader('x-csrf-jwt', jwtCsrf);
             });
 
-            next();
-        }
-    },
-
-    checkJwt: function(options){
-        return function(req, res, next){
-
+            //Validate JWT on incoming request.
             if(req.method !== 'GET') {
                 validate(options, req, function(err, result){
                     if(err || !result){
