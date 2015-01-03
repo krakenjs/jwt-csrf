@@ -11,6 +11,10 @@ function isLoggedIn(req) {
     return req.user ? true : false;
 }
 
+function toString(x) {
+    return typeof x === 'string' ? x : JSON.stringify(x);
+}
+
 /**
  * Constructs a jwt which would be dropped in res headers on every outgoing response.
  *
@@ -51,7 +55,7 @@ function create(options, req) {
     var data = [userAgent];
 
     if (isLoggedIn(req)) {
-        var payerId = JSON.stringify(req.user.encryptedAccountNumber);
+        var payerId = toString(req.user.encryptedAccountNumber);
         data.push(payerId);
     }
 
@@ -138,7 +142,7 @@ function validate(options, req, callback) {
             }
             //Check payerId in token
             var inputPayerId = split[1];
-            var userPayerId = JSON.stringify(req.user.encryptedAccountNumber);
+            var userPayerId = toString(req.user.encryptedAccountNumber);
             if (inputPayerId !== userPayerId) {
                 return callback(new Error('diff payerId [' + inputPayerId + '] vs [' + userPayerId + ']'), false);
             }
@@ -146,8 +150,8 @@ function validate(options, req, callback) {
         return callback(null, true);
 
     });
-
 }
+
 module.exports = {
 
     errCodes: errCodes,
