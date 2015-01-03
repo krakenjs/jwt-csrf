@@ -51,7 +51,7 @@ function create(options, req){
     var data = [userAgent];
 
     if(isLoggedIn(req)){
-        var payerId =  req.user.encryptedAccountNumber;
+        var payerId =  JSON.stringify(req.user.encryptedAccountNumber);
         data.push(payerId);
     }
 
@@ -138,7 +138,7 @@ function validate(options, req, callback) {
             }
             //Check payerId in token
             var inputPayerId = split[1];
-            var userPayerId = req.user.encryptedAccountNumber;
+            var userPayerId = JSON.stringify(req.user.encryptedAccountNumber);
             if (inputPayerId !== userPayerId) {
                 return callback(null, false);
             }
