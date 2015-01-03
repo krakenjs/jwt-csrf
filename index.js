@@ -99,7 +99,7 @@ function validate(options, req, callback) {
 
     //If the jwtToken is not send in header, then send a 401.
     if (!token) {
-        return callback(null, false);
+        return callback(new Error('missing token header'), false);
     }
 
     var secret = options.secret;
@@ -123,24 +123,24 @@ function validate(options, req, callback) {
         var split = decryptedPayload.split("::");
 
         if (!split || split.length < 1) {
-            return callback(null, false);
+            return callback(new Error('split token failed'), false);
         }
 
         var userAgentInToken = split[0];
         if (userAgentInToken !== userAgent) {
-            return callback(null, false);
+            return callback(new Error('user agent mismatched'), false);
         }
 
         //If this is a authenticated user, then verify the payerId in jwtToken with payerId in req.user.
         if (isLoggedIn(req)) {
             if (split.length !== 2) {
-                return callback(null, false);
+                return callback(new Error('logged in but token not in 2 parts'), false);
             }
             //Check payerId in token
             var inputPayerId = split[1];
             var userPayerId = JSON.stringify(req.user.encryptedAccountNumber);
             if (inputPayerId !== userPayerId) {
-                return callback(null, false);
+                return callback(new Error('diff payerId [' + inputPayerId + '] vs [' + userPayerId + ']'), false);
             }
         }
         return callback(null, true);
@@ -168,9 +168,9 @@ module.exports = {
                 validate(options, req, function(err, result){
                     if(err || !result){
                         res.status(401);
-                        var err = new Error('Invalid CSRF token');
-                        err.code = errCodes.INVALID_TOKEN;
-                        next(err);
+                        var invalidErr = new Error('Invalid CSRF token: ' + (err && err.message));
+                        invalidErr.code = errCodes.INVALID_TOKEN;
+                        next(invalidErr);
                     }
                 });
             }
