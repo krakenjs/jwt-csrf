@@ -1,0 +1,11 @@
+node_modules
+.build
+.idea
+.settings
+logs
+*.log
+.DS_Store
+coverage
+cdbs
+protected
+tmp
