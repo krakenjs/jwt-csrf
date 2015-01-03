@@ -7,8 +7,8 @@ var errCodes = {
     INVALID_TOKEN: "EINVALIDCSRF"
 }
 
-function isLoggedIn(req){
-    return req.user ? true: false;
+function isLoggedIn(req) {
+    return req.user ? true : false;
 }
 
 /**
@@ -34,13 +34,13 @@ function isLoggedIn(req){
  * @param options   {secret:*, macKey: *, expiresInMinutes: number}
  * @returns {Function}
  */
-function create(options, req){
+function create(options, req) {
     var payload;
     var expiry;
 
-    if(options.expiresInMinutes){
+    if (options.expiresInMinutes) {
         expiry = options.expiresInMinutes;
-    } else{
+    } else {
         //Set expiry to 20 mins from current time.
         expiry = 20;
     }
@@ -50,8 +50,8 @@ function create(options, req){
 
     var data = [userAgent];
 
-    if(isLoggedIn(req)){
-        var payerId =  JSON.stringify(req.user.encryptedAccountNumber);
+    if (isLoggedIn(req)) {
+        var payerId = JSON.stringify(req.user.encryptedAccountNumber);
         data.push(payerId);
     }
 
@@ -107,14 +107,14 @@ function validate(options, req, callback) {
 
     //If token is invalid this would throw error. We catch it and send 401 response.
     jsonwebtoken.verify(token, secret, function (err, payload) {
-        if(err){
+        if (err) {
             return callback(err);
         }
         var decryptedPayload;
 
-        try{
+        try {
             decryptedPayload = decrypt(secret, options.macKey, payload.token);
-        } catch (err){
+        } catch (err) {
             return callback(err);
         }
         var userAgent = req.headers['user-agent'];
@@ -154,19 +154,19 @@ module.exports = {
     create: create,
     validate: validate,
 
-    middleware: function(options){
-        return function(req, res, next){
+    middleware: function (options) {
+        return function (req, res, next) {
 
             //Set jwt in request headers on response out.
-            onHeaders(res, function() {
+            onHeaders(res, function () {
                 var jwtCsrf = create(options, req);
                 res.setHeader('x-csrf-jwt', jwtCsrf);
             });
 
             //Validate JWT on incoming request.
-            if(req.method !== 'GET') {
-                validate(options, req, function(err, result){
-                    if(err || !result){
+            if (req.method !== 'GET') {
+                validate(options, req, function (err, result) {
+                    if (err || !result) {
                         res.status(401);
                         var invalidErr = new Error('Invalid CSRF token: ' + (err && err.message));
                         invalidErr.code = errCodes.INVALID_TOKEN;
