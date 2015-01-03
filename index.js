@@ -7,8 +7,12 @@ var errCodes = {
     INVALID_TOKEN: "EINVALIDCSRF"
 }
 
-function isLoggedIn(req){
-    return req.user ? true: false;
+function isLoggedIn(req) {
+    return req.user ? true : false;
+}
+
+function toString(x) {
+    return typeof x === 'string' ? x : JSON.stringify(x);
 }
 
 /**
@@ -34,13 +38,13 @@ function isLoggedIn(req){
  * @param options   {secret:*, macKey: *, expiresInMinutes: number}
  * @returns {Function}
  */
-function create(options, req){
+function create(options, req) {
     var payload;
     var expiry;
 
-    if(options.expiresInMinutes){
+    if (options.expiresInMinutes) {
         expiry = options.expiresInMinutes;
-    } else{
+    } else {
         //Set expiry to 20 mins from current time.
         expiry = 20;
     }
@@ -50,8 +54,8 @@ function create(options, req){
 
     var data = [userAgent];
 
-    if(isLoggedIn(req)){
-        var payerId =  req.user.encryptedAccountNumber;
+    if (isLoggedIn(req)) {
+        var payerId = toString(req.user.encryptedAccountNumber);
         data.push(payerId);
     }
 
@@ -99,7 +103,7 @@ function validate(options, req, callback) {
 
     //If the jwtToken is not send in header, then send a 401.
     if (!token) {
-        return callback(null, false);
+        return callback(new Error('missing token header'), false);
     }
 
     var secret = options.secret;
@@ -107,14 +111,14 @@ function validate(options, req, callback) {
 
     //If token is invalid this would throw error. We catch it and send 401 response.
     jsonwebtoken.verify(token, secret, function (err, payload) {
-        if(err){
+        if (err) {
             return callback(err);
         }
         var decryptedPayload;
 
-        try{
+        try {
             decryptedPayload = decrypt(secret, options.macKey, payload.token);
-        } catch (err){
+        } catch (err) {
             return callback(err);
         }
         var userAgent = req.headers['user-agent'];
@@ -123,54 +127,54 @@ function validate(options, req, callback) {
         var split = decryptedPayload.split("::");
 
         if (!split || split.length < 1) {
-            return callback(null, false);
+            return callback(new Error('split token failed'), false);
         }
 
         var userAgentInToken = split[0];
         if (userAgentInToken !== userAgent) {
-            return callback(null, false);
+            return callback(new Error('user agent mismatched'), false);
         }
 
         //If this is a authenticated user, then verify the payerId in jwtToken with payerId in req.user.
         if (isLoggedIn(req)) {
             if (split.length !== 2) {
-                return callback(null, false);
+                return callback(new Error('logged in but token not in 2 parts'), false);
             }
             //Check payerId in token
             var inputPayerId = split[1];
-            var userPayerId = req.user.encryptedAccountNumber;
+            var userPayerId = toString(req.user.encryptedAccountNumber);
             if (inputPayerId !== userPayerId) {
-                return callback(null, false);
+                return callback(new Error('diff payerId [' + inputPayerId + '] vs [' + userPayerId + ']'), false);
             }
         }
         return callback(null, true);
 
     });
-
 }
+
 module.exports = {
 
     errCodes: errCodes,
     create: create,
     validate: validate,
 
-    middleware: function(options){
-        return function(req, res, next){
+    middleware: function (options) {
+        return function (req, res, next) {
 
             //Set jwt in request headers on response out.
-            onHeaders(res, function() {
+            onHeaders(res, function () {
                 var jwtCsrf = create(options, req);
                 res.setHeader('x-csrf-jwt', jwtCsrf);
             });
 
             //Validate JWT on incoming request.
-            if(req.method !== 'GET') {
-                validate(options, req, function(err, result){
-                    if(err || !result){
+            if (req.method !== 'GET') {
+                validate(options, req, function (err, result) {
+                    if (err || !result) {
                         res.status(401);
-                        var err = new Error('Invalid CSRF token');
-                        err.code = errCodes.INVALID_TOKEN;
-                        next(err);
+                        var invalidErr = new Error('Invalid CSRF token: ' + (err && err.message));
+                        invalidErr.code = errCodes.INVALID_TOKEN;
+                        next(invalidErr);
                     }
                 });
             }
