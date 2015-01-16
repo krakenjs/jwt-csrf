@@ -92,7 +92,7 @@ describe('create jwt Tests', function(){
 
         jwtCsrf.validate(options, req, function (err, flag) {
             assert(flag, 'validate callback with result: ' + flag);
-            next();
+            done();
         });
     });
 
