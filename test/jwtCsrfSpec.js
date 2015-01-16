@@ -72,6 +72,30 @@ describe('create jwt Tests', function(){
     });
 
 
+
+    it('test Login case without user-agent', function(done){
+        var options = {
+            secret : SECRET,
+            macKey: MACKEY
+        };
+
+        var req = {
+            headers : {
+            },
+            user: {
+                encryptedAccountNumber: 123443223432
+            }
+        };
+
+        var data = jwtCsrf.create(options, req);
+        req.headers['x-csrf-jwt'] = data;
+
+        jwtCsrf.validate(options, req, function (err, flag) {
+            assert(flag, 'validate callback with result: ' + flag);
+            next();
+        });
+    });
+
     it('Should call next for happy case', function(done){
 
         var req = {
