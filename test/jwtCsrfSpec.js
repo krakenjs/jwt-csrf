@@ -113,6 +113,11 @@ describe('create jwt Tests', function(){
         sym_test(undefined, done);
     });
 
+    it('test Login case with user-agent', function(done){
+        sym_test('hello world', done);
+    });
+
+
     it('Should call next for happy case', function(done){
 
         var req = {
