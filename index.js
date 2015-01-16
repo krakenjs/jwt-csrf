@@ -12,7 +12,7 @@ function isLoggedIn(req) {
 }
 
 function toString(x) {
-    return typeof x === 'string' ? x : JSON.stringify(x);
+    return x === undefined ? 'undefined' : ( typeof x === 'string' ? x : JSON.stringify(x) );
 }
 
 /**
@@ -49,8 +49,7 @@ function create(options, req) {
         expiry = 20;
     }
 
-
-    var userAgent = req.headers && req.headers['user-agent'];
+    var userAgent = toString(req.headers && req.headers['user-agent']);
 
     var data = [userAgent];
 
@@ -121,7 +120,7 @@ function validate(options, req, callback) {
         } catch (err) {
             return callback(err);
         }
-        var userAgent = req.headers['user-agent'];
+        var userAgent = toString(req.headers['user-agent']);
 
         //Expected format for decryptedPayLoad is randomToken:payerId:user-agent
         var split = decryptedPayload.split("::");

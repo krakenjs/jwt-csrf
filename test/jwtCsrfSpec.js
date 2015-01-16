@@ -71,6 +71,47 @@ describe('create jwt Tests', function(){
 
     });
 
+    function sym_test(user_agent, done) {
+        var options = {
+            secret : SECRET,
+            macKey: MACKEY
+        };
+
+        var req = {
+            headers : {
+            },
+            user: {
+                encryptedAccountNumber: 123443223432
+            }
+        };
+        if (user_agent !== undefined) {
+            req.headers['user-agent'] = user_agent;
+        }
+
+        var data = jwtCsrf.create(options, req);
+        req.headers['x-csrf-jwt'] = data;
+
+        jwtCsrf.validate(options, req, function (err, flag) {
+            assert(flag, 'validate callback with result: ' + flag);
+            done();
+        });
+    }
+
+    it('test Login case with user-agent as empty string', function(done){
+        sym_test('', done);
+    });
+
+    it('test Login case with user-agent as white space string', function(done){
+        sym_test('   ', done);
+    });
+
+    it('test Login case with user-agent as null', function(done){
+        sym_test(null, done);
+    });
+
+    it('test Login case with user-agent as undefined', function(done){
+        sym_test(undefined, done);
+    });
 
     it('Should call next for happy case', function(done){
 
