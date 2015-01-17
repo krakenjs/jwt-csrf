@@ -159,7 +159,6 @@ module.exports = {
 
     middleware: function (options) {
         return function (req, res, next) {
-
             //Set jwt in request headers on response out.
             onHeaders(res, function () {
                 var jwtCsrf = create(options, req);
@@ -171,14 +170,17 @@ module.exports = {
                 validate(options, req, function (err, result) {
                     if (err || !result) {
                         res.status(401);
-                        var invalidErr = new Error('Invalid CSRF token: ' + (err && err.message));
+                        var invalidErr = new Error('Invalid CSRF token: ' + err.message);
                         invalidErr.code = errCodes.INVALID_TOKEN;
-                        next(invalidErr);
+                        invalidErr.details = err.message;
+                        return next(invalidErr);
                     }
+                    next();
                 });
             }
-            next();
-
+            else {
+                next();
+            }
         }
     }
 
