@@ -131,7 +131,10 @@ function validate(options, req, callback) {
 
         var userAgentInToken = split[0];
         if (userAgentInToken !== userAgent) {
-            return callback(new Error('user agent mismatched'), false);
+            var error = new Error('user agent mismatched');
+            error.userAgentInToken = userAgentInToken;
+            error.userAgent = userAgent;
+            return callback(error, false);
         }
 
         //If this is a authenticated user, then verify the payerId in jwtToken with payerId in req.user.
