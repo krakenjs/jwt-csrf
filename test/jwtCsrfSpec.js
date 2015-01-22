@@ -27,15 +27,15 @@ describe('create jwt Tests', function(){
             secret : SECRET,
             macKey: MACKEY,
             expiresInMinutes: 20
-        }
+        };
 
         var data = jwtCsrf.create(options, req);
 
         jsonwebtoken.verify(data, SECRET, function(err, decoded) {
             var plainText = lib.decrypt(SECRET, MACKEY, decoded.token);
-            var split = plainText.split(":");
-            assert(split && split.length === 1 , 'Assert the decrypted jwt to have 1 field');
-            assert(split[0] === userAgent, 'Expect payload to have right user agent');
+            var x = JSON.parse(plainText);
+            assert(x && x.ua && x.uid, 'Assert the decrypted jwt to have ua and uid');
+            assert(x.ua === userAgent, 'Expect payload to have right user agent');
             done();
         });
 
@@ -56,15 +56,15 @@ describe('create jwt Tests', function(){
         var options = {
             secret : SECRET,
             macKey: MACKEY
-        }
+        };
 
         var data = jwtCsrf.create(options, req);
 
         jsonwebtoken.verify(data, SECRET, function(err, decoded) {
             var plainText = lib.decrypt(SECRET, MACKEY, decoded.token);
-            var split = plainText.split("::");
-            assert(split && split.length === 2 , 'Assert the decrypted jwt to have 1 field');
-            assert(split[1] === req.user.encryptedAccountNumber.toString(), 'Assert the payerId in the token');
+            var x = JSON.parse(plainText);
+            assert(x && x.ua && x.uid, 'Assert the decrypted jwt to have ua and uid');
+            assert(x.uid === req.user.encryptedAccountNumber.toString(), 'Assert the payerId in the token');
             done();
         });
 
@@ -168,14 +168,12 @@ describe('validate Tests', function(){
     }
 
     function constructToken(customAgent, payerId){
-        var data = [
-            customAgent || userAgent
-        ]
+        var data = {
+            ua: customAgent || userAgent,
+            uid: payerId
+        };
 
-        if(payerId){
-            data.push(payerId);
-        }
-        return data.join("::");
+        return JSON.stringify(data);
     }
 
     it('Should fail with no token', function(done){
@@ -194,7 +192,7 @@ describe('validate Tests', function(){
 
     });
 
-    it('Should fail if less than 1 field in token', function(done){
+    it('Should fail if token not valid JSON', function(done){
 
         var token = "";
         var ecryptedToken = {
@@ -219,7 +217,7 @@ describe('validate Tests', function(){
 
     it('Should fail for mismatch useragent', function(done){
 
-        var token = constructToken('Chrome');
+        var token = constructToken('Chrome', 'x');
         var ecryptedToken = {
             token: lib.encrypt(SECRET, MACKEY, token)
         };
@@ -270,7 +268,7 @@ describe('validate Tests', function(){
 
     it('Should fail for missing payer Id in loggedin case', function(done){
 
-        var token = constructToken();
+        var token = constructToken(userAgent, 'x');
         var ecryptedToken = {
             token: lib.encrypt(SECRET, MACKEY, token)
         };
@@ -323,7 +321,7 @@ describe('validate Tests', function(){
 
     it('Should work for No login happy case', function(done){
 
-        var token = constructToken();
+        var token = constructToken(userAgent, 'x');
         var ecryptedToken = {
             token: lib.encrypt(SECRET, MACKEY, token)
         };
@@ -364,7 +362,7 @@ describe('validate Tests', function(){
         };
 
         jwtCsrf.validate(options, req, function(err, data){
-            assert(data , 'Expect verification to succeed');
+            assert(data , 'Expect verification to succeed ');
             done();
         })
     });
@@ -389,7 +387,7 @@ describe('validate Tests', function(){
 
         var middleware = jwtCsrf.middleware(options);
 
-        middleware(req, {}, next);
+        middleware(req, {status: function () {}}, next);
 
         assert(next.called, 'Expect next() to be called');
 

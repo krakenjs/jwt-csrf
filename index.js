@@ -5,7 +5,7 @@ var onHeaders = require('on-headers');
 
 var errCodes = {
     INVALID_TOKEN: "EINVALIDCSRF"
-}
+};
 
 function isLoggedIn(req) {
     return req.user ? true : false;
@@ -49,16 +49,12 @@ function create(options, req) {
         expiry = 20;
     }
 
-    var userAgent = toString(req.headers && req.headers['user-agent']);
+    var data = {
+        ua: toString(req.headers && req.headers['user-agent']),
+        uid: isLoggedIn(req) ? toString(req.user.encryptedAccountNumber) : 'not_logged_in'
+    };
 
-    var data = [userAgent];
-
-    if (isLoggedIn(req)) {
-        var payerId = toString(req.user.encryptedAccountNumber);
-        data.push(payerId);
-    }
-
-    payload = data.join("::");
+    payload = JSON.stringify(data);
 
     var encryptedPayload = {
         token: encrypt(options.secret, options.macKey, payload)
@@ -96,6 +92,7 @@ function create(options, req) {
  *
  */
 
+
 function validate(options, req, callback) {
 
     var token = req.headers && req.headers['x-csrf-jwt'];
@@ -107,29 +104,27 @@ function validate(options, req, callback) {
 
     var secret = options.secret;
 
-
     //If token is invalid this would throw error. We catch it and send 401 response.
     jsonwebtoken.verify(token, secret, function (err, payload) {
         if (err) {
             return callback(err);
         }
-        var decryptedPayload;
+        var data;
 
         try {
-            decryptedPayload = decrypt(secret, options.macKey, payload.token);
+            var decryptedPayload = decrypt(secret, options.macKey, payload.token);
+            data = JSON.parse(decryptedPayload);
         } catch (err) {
             return callback(err);
         }
-        var userAgent = toString(req.headers['user-agent']);
 
-        //Expected format for decryptedPayLoad is randomToken:payerId:user-agent
-        var split = decryptedPayload.split("::");
-
-        if (!split || split.length < 1) {
-            return callback(new Error('split token failed'), false);
+        if (!data) {
+            return callback(new Error('decrypt token failed'), false);
         }
 
-        var userAgentInToken = split[0];
+        var userAgent = toString(req.headers['user-agent']);
+
+        var userAgentInToken = data.ua;
         if (userAgentInToken !== userAgent) {
             var error = new Error('user agent mismatched');
             error.userAgentInToken = userAgentInToken;
@@ -139,18 +134,15 @@ function validate(options, req, callback) {
 
         //If this is a authenticated user, then verify the payerId in jwtToken with payerId in req.user.
         if (isLoggedIn(req)) {
-            if (split.length !== 2) {
-                return callback(new Error('logged in but token not in 2 parts'), false);
-            }
             //Check payerId in token
-            var inputPayerId = split[1];
+            var inputPayerId = data.uid;
             var userPayerId = toString(req.user.encryptedAccountNumber);
-            if (inputPayerId !== userPayerId) {
+            if (inputPayerId === 'not_logged_in' || inputPayerId !== userPayerId) {
                 return callback(new Error('diff payerId [' + inputPayerId + '] vs [' + userPayerId + ']'), false);
             }
         }
-        return callback(null, true);
 
+        return callback(null, true);
     });
 }
 
