@@ -34,8 +34,7 @@ describe('create jwt Tests', function(){
         jsonwebtoken.verify(data, SECRET, function(err, decoded) {
             var plainText = lib.decrypt(SECRET, MACKEY, decoded.token);
             var x = JSON.parse(plainText);
-            assert(x && x.ua && x.uid, 'Assert the decrypted jwt to have ua and uid');
-            assert(x.ua === userAgent, 'Expect payload to have right user agent');
+            assert(x && x.uid, 'Assert the decrypted jwt to have uid');
             done();
         });
 
@@ -63,7 +62,7 @@ describe('create jwt Tests', function(){
         jsonwebtoken.verify(data, SECRET, function(err, decoded) {
             var plainText = lib.decrypt(SECRET, MACKEY, decoded.token);
             var x = JSON.parse(plainText);
-            assert(x && x.ua && x.uid, 'Assert the decrypted jwt to have ua and uid');
+            assert(x && x.uid, 'Assert the decrypted jwt to have uid');
             assert(x.uid === req.user.encryptedAccountNumber.toString(), 'Assert the payerId in the token');
             done();
         });
@@ -169,7 +168,6 @@ describe('validate Tests', function(){
 
     function constructToken(customAgent, payerId){
         var data = {
-            ua: customAgent || userAgent,
             uid: payerId
         };
 
@@ -214,30 +212,6 @@ describe('validate Tests', function(){
         })
 
     });
-
-    it('Should fail for mismatch useragent', function(done){
-
-        var token = constructToken('Chrome', 'x');
-        var ecryptedToken = {
-            token: lib.encrypt(SECRET, MACKEY, token)
-        };
-
-        var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
-
-        var req = {
-            headers : {
-                'x-csrf-jwt': jwtData,
-                'user-agent': userAgent
-            }
-        };
-
-        jwtCsrf.validate(options, req, function(err, data){
-            assert(!data , 'Expect verification to fail');
-            done();
-        })
-
-    });
-
 
     it('Should fail for expired token', function(done){
 
@@ -398,7 +372,7 @@ describe('validate Tests', function(){
 
     it('Should set 401 status and call next(err) for non happy case', function(done){
 
-        var token = constructToken();
+        var token = "";
         var ecryptedToken = {
             token: lib.encrypt(SECRET, MACKEY, token)
         };
