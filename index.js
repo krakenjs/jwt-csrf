@@ -50,7 +50,6 @@ function create(options, req) {
     }
 
     var data = {
-        ua: toString(req.headers && req.headers['user-agent']),
         uid: isLoggedIn(req) ? toString(req.user.encryptedAccountNumber) : 'not_logged_in'
     };
 
@@ -120,16 +119,6 @@ function validate(options, req, callback) {
 
         if (!data) {
             return callback(new Error('decrypt token failed'), false);
-        }
-
-        var userAgent = toString(req.headers['user-agent']);
-
-        var userAgentInToken = data.ua;
-        if (userAgentInToken !== userAgent) {
-            var error = new Error('user agent mismatched');
-            error.userAgentInToken = userAgentInToken;
-            error.userAgent = userAgent;
-            return callback(error, false);
         }
 
         //If this is a authenticated user, then verify the payerId in jwtToken with payerId in req.user.
