@@ -150,7 +150,7 @@ module.exports = {
             });
 
             //Validate JWT on incoming request.
-            if (req.method !== 'GET') {
+            if (req.method !== 'GET' && req.method !== 'HEAD') {
                 validate(options, req, function (err, result) {
                     if (err || !result) {
                         res.status(401);
