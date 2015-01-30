@@ -1,6 +1,6 @@
 {
   "name": "jwt-csrf",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "description": "A jwt middleware provider for hermes",
   "main": "index.js",
   "scripts": {
