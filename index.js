@@ -1,3 +1,5 @@
+'use strict';
+
 var jsonwebtoken = require('jsonwebtoken');
 var encrypt = require('./lib').encrypt;
 var decrypt = require('./lib').decrypt;
@@ -72,10 +74,11 @@ function create(options, req) {
  * Verifies JWT token in req headers
  * ----------------------------------------
  *
- * 1. If the request is POST, then get the jwt from headers['x-csrf-jwt]. If token is not present then send a 401 response.
+ * 1. If the request is POST, then get the jwt from headers['x-csrf-jwt]. If token is not present
+ *    then send a 401 response.
  *
  * 2. Try decoding JWT. JWT decoding logic will throw error if the payload does not match the encrypted value.
- *  JWT is a self verifying token. If decoding throws error then send a 401.
+ *    JWT is a self verifying token. If decoding throws error then send a 401.
  *
  * 3. If this is a logged in user, decrypt the payload. For logged in case decrypted payload will be of the form
  *    user-agent:payerId.
@@ -84,8 +87,8 @@ function create(options, req) {
  *
  * 4. Additionally for both logged in and not authenticated user, match user agent as a additional level of security.
  *
- * Takes a callback. callback will be called with err if there is any error in decryption. Or else it will be called with
- * callback(null, result). result could be true or false depending on whether validation succeeds or fails.
+ * Takes a callback. callback will be called with err if there is any error in decryption. Or else it will be called
+ * with callback(null, result). result could be true or false depending on whether validation succeeds or fails.
  *
  * @param options {secret:*, macKey: *}
  *
@@ -96,9 +99,15 @@ function validate(options, req, callback) {
 
     var token = req.headers && req.headers['x-csrf-jwt'];
 
+    function makeError(code, msg) {
+        var e = new Error(msg);
+        e.code = code;
+        return e;
+    }
+
     //If the jwtToken is not send in header, then send a 401.
     if (!token) {
-        return callback(new Error('missing token header'), false);
+        return callback(makeError('MISSING_TOKEN', 'missing token header'), false);
     }
 
     var secret = options.secret;
@@ -106,6 +115,7 @@ function validate(options, req, callback) {
     //If token is invalid this would throw error. We catch it and send 401 response.
     jsonwebtoken.verify(token, secret, function (err, payload) {
         if (err) {
+            err.code = 'VERIFY_FAILED';
             return callback(err);
         }
         var data;
@@ -114,11 +124,12 @@ function validate(options, req, callback) {
             var decryptedPayload = decrypt(secret, options.macKey, payload.token);
             data = JSON.parse(decryptedPayload);
         } catch (err) {
+            err.code = 'DECRYPT_EXCEPTION';
             return callback(err);
         }
 
         if (!data) {
-            return callback(new Error('decrypt token failed'), false);
+            return callback(makeError('DECRYPT_FAILED', 'decrypt token failed'), false);
         }
 
         //If this is a authenticated user, then verify the payerId in jwtToken with payerId in req.user.
@@ -127,7 +138,8 @@ function validate(options, req, callback) {
             var inputPayerId = data.uid;
             var userPayerId = toString(req.user.encryptedAccountNumber);
             if (inputPayerId === 'not_logged_in' || inputPayerId !== userPayerId) {
-                return callback(new Error('diff payerId [' + inputPayerId + '] vs [' + userPayerId + ']'), false);
+                return callback(makeError('DIFF_PAYERID',
+                    'diff payerId [' + inputPayerId + '] vs [' + userPayerId + ']'), false);
             }
         }
 
@@ -155,7 +167,7 @@ module.exports = {
                     if (err || !result) {
                         res.status(401);
                         var invalidErr = new Error('Invalid CSRF token: ' + err.message);
-                        invalidErr.code = errCodes.INVALID_TOKEN;
+                        invalidErr.code = errCodes.INVALID_TOKEN + '_' + err.code;
                         invalidErr.details = err.message;
                         return next(invalidErr);
                     }
@@ -165,7 +177,7 @@ module.exports = {
             else {
                 next();
             }
-        }
+        };
     }
 
-}
+};
