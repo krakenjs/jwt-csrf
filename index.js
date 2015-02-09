@@ -137,7 +137,11 @@ function validate(options, req, callback) {
             //Check payerId in token
             var inputPayerId = data.uid;
             var userPayerId = toString(req.user.encryptedAccountNumber);
-            if (inputPayerId === 'not_logged_in' || inputPayerId !== userPayerId) {
+            if (inputPayerId === 'not_logged_in') {
+                return callback(makeError('NOT_LOGGED_IN_TOKEN',
+                    'not logged in token vs user [' + userPayerId + ']'), false);
+            }
+            else if (inputPayerId !== userPayerId) {
                 return callback(makeError('DIFF_PAYERID',
                     'diff payerId [' + inputPayerId + '] vs [' + userPayerId + ']'), false);
             }

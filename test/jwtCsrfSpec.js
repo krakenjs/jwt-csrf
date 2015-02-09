@@ -144,8 +144,7 @@ describe('create jwt Tests', function () {
     });
 
     it('should skip if req.method is GET', function (done) {
-        var options = {
-        };
+        var options = {};
 
         var mw = jwtCsrf.middleware(options);
         mw({method: 'GET'}, {}, function (err) {
@@ -317,6 +316,34 @@ describe('validate Tests', function () {
         };
 
         jwtCsrf.validate(options, req, function (err, data) {
+            assert.equal(err.code, 'DIFF_PAYERID');
+            assert(!data, 'Expect verification to fail');
+            done();
+        })
+
+    });
+
+    it('Should fail for missing payer Id in loggedin case', function (done) {
+
+        var token = constructToken(userAgent, 'not_logged_in');
+        var ecryptedToken = {
+            token: lib.encrypt(SECRET, MACKEY, token)
+        };
+
+        var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
+
+        var req = {
+            headers: {
+                'x-csrf-jwt': jwtData,
+                'user-agent': userAgent
+            },
+            user: {
+                encryptedAccountNumber: 123443223432
+            }
+        };
+
+        jwtCsrf.validate(options, req, function (err, data) {
+            assert.equal(err.code, 'NOT_LOGGED_IN_TOKEN');
             assert(!data, 'Expect verification to fail');
             done();
         })
