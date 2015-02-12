@@ -200,7 +200,7 @@ describe('validate Tests', function () {
     var options = {
         secret: SECRET,
         macKey: MACKEY
-    }
+    };
 
     function constructToken(customAgent, payerId) {
         var data = {
@@ -290,6 +290,7 @@ describe('validate Tests', function () {
 
         jwtCsrf.validate(options, req, function (err, data) {
             assert(!data, 'Expect verification to fail');
+            assert.ok(err.code.indexOf('expired') >= 0, 'err code should contain expired');
             done();
         })
 

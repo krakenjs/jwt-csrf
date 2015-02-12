@@ -115,7 +115,7 @@ function validate(options, req, callback) {
     //If token is invalid this would throw error. We catch it and send 401 response.
     jsonwebtoken.verify(token, secret, function (err, payload) {
         if (err) {
-            err.code = 'VERIFY_FAILED';
+            err.code = err.message ? err.message.substring(0, 25).replace(/ /, '_') : 'VERIFY_FAILED';
             return callback(err);
         }
         var data;
