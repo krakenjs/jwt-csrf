@@ -24,5 +24,8 @@
     "url": "https://github.paypal.com/NodeXOShared/jwt-csrf.git"
   },
   "author": "vgorthy@paypal.com",
-  "license": "PayPal"
+  "license": "PayPal",
+  "publishingConfig": {
+    "registry": "http://npm.paypal.com"
+  }
 }
