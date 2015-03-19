@@ -152,5 +152,5 @@
     // Max number of statements in a function
     "maxstatements": 40,
     // Max cyclomatic complexity of a function
-    "maxcomplexity": 10
+    "maxcomplexity": 11
 }

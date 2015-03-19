@@ -9,3 +9,7 @@ coverage
 cdbs
 protected
 tmp
+ext
+tools/tmp
+public/components
+plato-reports
