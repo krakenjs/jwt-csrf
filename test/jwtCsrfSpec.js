@@ -1,4 +1,5 @@
 'use strict';
+/* global describe: false, it: false, before: false, after: false, beforeEach: false */
 
 var lib = require('../lib/index');
 var sinon = require('sinon');
@@ -220,7 +221,7 @@ describe('validate Tests', function () {
         jwtCsrf.validate(options, req, function (err, data) {
             assert(!data, 'Expect verification to fail');
             done();
-        })
+        });
 
 
     });
@@ -265,7 +266,7 @@ describe('validate Tests', function () {
         jwtCsrf.validate(options, req, function (err, data) {
             assert(!data, 'Expect verification to fail');
             done();
-        })
+        });
 
     });
 
@@ -292,7 +293,7 @@ describe('validate Tests', function () {
             assert(!data, 'Expect verification to fail');
             assert.ok(err.code.indexOf('expired') >= 0, 'err code should contain expired');
             done();
-        })
+        });
 
     });
 
@@ -320,7 +321,7 @@ describe('validate Tests', function () {
             assert.equal(err.code, 'DIFF_PAYERID');
             assert(!data, 'Expect verification to fail');
             done();
-        })
+        });
 
     });
 
@@ -347,7 +348,7 @@ describe('validate Tests', function () {
             assert.equal(err.code, 'NOT_LOGGED_IN_TOKEN');
             assert(!data, 'Expect verification to fail');
             done();
-        })
+        });
 
     });
 
@@ -374,7 +375,7 @@ describe('validate Tests', function () {
             assert(!data, 'Expect verification to fail');
             assert.equal(err.code, 'DIFF_PAYERID');
             done();
-        })
+        });
 
 
     });
@@ -398,7 +399,7 @@ describe('validate Tests', function () {
         jwtCsrf.validate(options, req, function (err, data) {
             assert(data, 'Expect verification to succeed');
             done();
-        })
+        });
     });
 
 
@@ -424,7 +425,7 @@ describe('validate Tests', function () {
         jwtCsrf.validate(options, req, function (err, data) {
             assert(data, 'Expect verification to succeed ');
             done();
-        })
+        });
     });
 
     it('Should call next for happy case', function (done) {
