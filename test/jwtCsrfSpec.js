@@ -444,15 +444,12 @@ describe('validate Tests', function () {
             }
         };
 
-        var next = sinon.spy();
-
         var middleware = jwtCsrf.middleware(options);
 
-        middleware(req, {status: function () {}}, next);
-
-        assert(next.called, 'Expect next() to be called');
-
-        done();
+        middleware(req, {status: function () {}}, function(err, result){
+            assert(!err, 'Expect next() to be called without error');
+            done();
+        });
 
     });
 
@@ -480,12 +477,14 @@ describe('validate Tests', function () {
 
         var middleware = jwtCsrf.middleware(options);
 
-        middleware(req, res, next);
+        middleware(req, res, function(err, result){
+            assert(res.status.calledWith(401), 'Expect status 401 to be set');
+            assert(err,
+                "Expect next() called with err");
+            done();
+        });
 
-        assert(res.status.calledWith(401), 'Expect status 401 to be set');
-        assert(next.args.toString(),
-            "Expect next() called with err");
-        done();
+
 
     });
 
