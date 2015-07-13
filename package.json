@@ -4,7 +4,7 @@
   "description": "A jwt middleware provider for hermes",
   "main": "index.js",
   "scripts": {
-    "test": "mocha -R spec test",
+    "test": "eslint lib/ && mocha -R spec test",
     "cover": "istanbul cover _mocha -- -R spec test",
     "lint": "jshint -c .jshintrc index.js lib/"
   },
@@ -15,6 +15,8 @@
   },
   "devDependencies": {
     "chai": "^2.1.2",
+    "eslint": "^0.17.1",
+    "eslint-plugin-consumerweb": "^1.0.0",
     "grunt": "^0.4.5",
     "grunt-check-plato": "^1.0.0",
     "grunt-ci-suite": "^0.1.9",
