@@ -4,9 +4,9 @@
   "description": "A jwt middleware provider for hermes",
   "main": "index.js",
   "scripts": {
-    "test": "eslint lib/ && mocha -R spec test",
-    "cover": "istanbul cover _mocha -- -R spec test",
-    "lint": "jshint -c .jshintrc index.js lib/"
+    "test": "grunt test",
+    "cover": "grunt cover",
+    "lint": "grunt lint"
   },
   "dependencies": {
     "cryptutils-paypal": "^1.0.2",
@@ -22,9 +22,9 @@
     "grunt-check-plato": "^1.0.0",
     "grunt-ci-suite": "^0.1.9",
     "grunt-contrib-clean": "^0.6.0",
+    "grunt-eslint": "^14.0.0",
     "grunt-mocha-cli": "^1.12.0",
     "grunt-plato": "^1.2.1",
-    "jshint": "^2.6.3",
     "load-grunt-tasks": "^3.1.0",
     "mocha": "^2.2.1",
     "mocha-jenkins-reporter": "^0.1.6",
