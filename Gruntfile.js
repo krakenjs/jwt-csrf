@@ -24,12 +24,15 @@ module.exports = function (grunt) {
             build: '.build',
             coverage: coverageDirectory
         },
-        jshint: {
-            files: allFiles,
+        eslint: {
             options: {
-                jshintrc: '.jshintrc',
-                reporter: isFusion() ? 'checkstyle-file' : 'jshint'
-            }
+                config: '.eslintrc',
+                format: isFusion() ? 'checkstyle' : 'stylish',
+                outputFile: isFusion() ? 'checkstyle.xml' : ''
+            },
+            module: [
+                'lib/**/*.js'
+            ]
         },
         mochatest: {
             src: testFiles,
@@ -95,8 +98,8 @@ module.exports = function (grunt) {
     require('load-grunt-tasks')(grunt);
 
     grunt.registerTask('cover', ['coverage']);
-    grunt.registerTask('lint', ['jshint']);
+    grunt.registerTask('lint', ['eslint']);
     grunt.registerTask('build', ['test']);
-    grunt.registerTask('test', ['jshint', 'mochatest', 'plato', 'checkplato']);
+    grunt.registerTask('test', ['lint', 'mochatest', 'plato', 'checkplato']);
     grunt.registerTask('coverage', ['clean:coverage', 'codecoverage', 'checkcoverage']);
 };
