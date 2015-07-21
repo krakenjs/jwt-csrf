@@ -28,7 +28,7 @@
     "load-grunt-tasks": "^3.1.0",
     "mocha": "^2.2.1",
     "mocha-jenkins-reporter": "^0.1.6",
-    "pre-commit": "^1.0.6",
+    "pre-commit": "^1.0.10",
     "sinon-chai": "^2.6.0",
     "xunit-file": "0.0.6"
   },
@@ -40,5 +40,8 @@
   "license": "PayPal",
   "publishConfig": {
     "registry": "http://npm.paypal.com"
-  }
+  },
+  "pre-commit": [
+    "lint"
+  ]
 }
