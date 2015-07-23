@@ -1,5 +1,7 @@
 jwt-csrf
 ========
+[![Dependency Status](http://daviddm-5042.ccg21.dev.paypalcorp.com:1337/NodeXOShared/jwt-csrf.svg)](http://daviddm-5042.ccg21.dev.paypalcorp.com:1337/NodeXOShared/jwt-csrf)
+[![devDependency Status](http://daviddm-5042.ccg21.dev.paypalcorp.com:1337/NodeXOShared/jwt-csrf/dev-status.svg)](http://daviddm-5042.ccg21.dev.paypalcorp.com:1337/NodeXOShared/jwt-csrf#info=devDependencies)
 
 Jwt middleware provider for hermes
 
