@@ -158,6 +158,14 @@ module.exports = {
     validate: validate,
 
     middleware: function (options) {
+
+        var excludeUrls = options.excludeUrls || [];
+        if (options.baseUrl) {
+            excludeUrls = excludeUrls.map(function (route) {
+                return options.baseUrl + route;
+            });
+        }
+
         return function (req, res, next) {
             //Set jwt in request headers on response out.
             onHeaders(res, function () {
@@ -166,7 +174,8 @@ module.exports = {
             });
 
             //Validate JWT on incoming request.
-            if (req.method !== 'GET' && req.method !== 'HEAD') {
+            if (req.method !== 'GET' && req.method !== 'HEAD'
+                && excludeUrls.indexOf(req.originalUrl) === -1) {
                 validate(options, req, function (err, result) {
                     if (err || !result) {
                         res.status(401);
