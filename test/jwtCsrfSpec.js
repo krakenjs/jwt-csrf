@@ -453,6 +453,38 @@ describe('validate Tests', function () {
 
     });
 
+    it('Should call next for excludeUrls', function (done) {
+
+        var token = constructToken();
+        var ecryptedToken = {
+            token: lib.encrypt(SECRET, MACKEY, token)
+        };
+
+        var jwtData = jsonwebtoken.sign(ecryptedToken, SECRET);
+
+        var req = {
+            headers: {
+                'user-agent': userAgent
+            },
+            originalUrl: '/webapps/one'
+        };
+
+        var excludeUrlsOptions = {
+            secret: SECRET,
+            macKey: MACKEY,
+            baseUrl: "/webapps",
+            excludeUrls: ["/one"]
+        };
+
+        var middleware = jwtCsrf.middleware(excludeUrlsOptions);
+
+        middleware(req, {status: function () {}}, function(err, result){
+            assert(!err, 'Expect next() to be called without error');
+            done();
+        });
+
+    });
+
 
     it('Should set 401 status and call next(err) for non happy case', function (done) {
 
