@@ -65,11 +65,12 @@ function create(options, payload) {
  * Creates a cookie and header token using the same uuid, but different types
  *
  * @param {Object} options - Must contain "secret" and "macKey"
+ * @param {Object} res - Express response object
  * @returns {Object} - Has signed cookie and header tokens
  */
-function createTokens(options) {
+function createTokens(options, res) {
     var tokens = {};
-    var id = uuid.v4();
+    var id = res.locals.jwtuuid = res.locals.jwtuuid || uuid.v4();
 
     ['cookie', 'header'].forEach(function (type) {
         tokens[type] = create(options, {
@@ -210,7 +211,7 @@ module.exports = {
 
             // Set JWT in header and cookie before response goes out
             onHeaders(res, function () {
-                var tokens = createTokens(options, req);
+                var tokens = createTokens(options, res);
 
                 // Set CSRF as a custom response header
                 res.setHeader('x-csrf-jwt', tokens.header);
