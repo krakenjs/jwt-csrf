@@ -39,13 +39,17 @@ describe('middleware', function () {
     var userAgent = 'Mozilla';
     var options;
     var tokens;
+    var res;
 
     beforeEach(function () {
         options = {
             secret: SECRET,
             macKey: MACKEY
         };
-        tokens = jwtCsrf.createTokens(options);
+        res = {
+            locals: {}
+        }
+        tokens = jwtCsrf.createTokens(options, res);
     });
 
     describe('Happy', function () {
@@ -80,7 +84,9 @@ describe('middleware', function () {
 
         it('Should call next if token is verified and valid', function (done) {
 
-            var tokens = jwtCsrf.createTokens(options);
+            var tokens = jwtCsrf.createTokens(options, {
+                locals: {}
+            });
 
             var req = {
                 headers: {
@@ -108,22 +114,8 @@ describe('middleware', function () {
 
         it('Should set header and token on response out', function () {
 
-            var tokens = jwtCsrf.createTokens(options);
-
-            var req = {
-                headers: {
-                    'x-csrf-jwt': tokens.header,
-                    'user-agent': userAgent
-                },
-                cookies: {
-                    'csrf-jwt': tokens.cookie
-                },
-                get: function () {
-                    return 'https://www.paypal.com';
-                }
-            };
-
             var res = {
+                locals: {},
                 status: function (statusCode) {
                     assert(!statusCode, 'Ensure there is no status code set, defaults to 200');
                 },
@@ -142,6 +134,21 @@ describe('middleware', function () {
                 }
             };
 
+            var tokens = jwtCsrf.createTokens(options, res);
+
+            var req = {
+                headers: {
+                    'x-csrf-jwt': tokens.header,
+                    'user-agent': userAgent
+                },
+                cookies: {
+                    'csrf-jwt': tokens.cookie
+                },
+                get: function () {
+                    return 'https://www.paypal.com';
+                }
+            };
+
             var middleware = jwtCsrf.middleware(options);
 
             middleware(req, res, function(err, result){
@@ -156,7 +163,9 @@ describe('middleware', function () {
 
         it('Should throw a 401 if there are no tokens', function (done) {
 
-            var tokens = jwtCsrf.createTokens(options);
+            var tokens = jwtCsrf.createTokens(options, {
+                locals: {}
+            });
 
             var req = {
                 headers: {
@@ -181,7 +190,9 @@ describe('middleware', function () {
 
         it('Should throw a 401 if there is only a header token', function (done) {
 
-            var tokens = jwtCsrf.createTokens(options);
+            var tokens = jwtCsrf.createTokens(options, {
+                locals: {}
+            });
 
             var req = {
                 headers: {
@@ -207,7 +218,9 @@ describe('middleware', function () {
 
         it('Should throw a 401 if there is only a cookie token', function (done) {
 
-            var tokens = jwtCsrf.createTokens(options);
+            var tokens = jwtCsrf.createTokens(options, {
+                locals: {}
+            });
 
             var req = {
                 headers: {
@@ -235,7 +248,9 @@ describe('middleware', function () {
 
         it('Should throw a 401 if the header could not be decrypted', function (done) {
 
-            var tokens = jwtCsrf.createTokens(options);
+            var tokens = jwtCsrf.createTokens(options, {
+                locals: {}
+            });
 
             var req = {
                 headers: {
@@ -264,7 +279,9 @@ describe('middleware', function () {
 
         it('Should throw a 401 if the cookie could not be decrypted', function (done) {
 
-            var tokens = jwtCsrf.createTokens(options);
+            var tokens = jwtCsrf.createTokens(options, {
+                locals: {}
+            });
 
             var req = {
                 headers: {
@@ -293,7 +310,9 @@ describe('middleware', function () {
 
         it('Should throw a 401 if the header token has a type of cookie', function (done) {
 
-            var tokens = jwtCsrf.createTokens(options);
+            var tokens = jwtCsrf.createTokens(options, {
+                locals: {}
+            });
 
             var req = {
                 headers: {
@@ -322,7 +341,9 @@ describe('middleware', function () {
 
         it('Should throw a 401 if the cookie token has a type of header', function (done) {
 
-            var tokens = jwtCsrf.createTokens(options);
+            var tokens = jwtCsrf.createTokens(options, {
+                locals: {}
+            });
 
             var req = {
                 headers: {
@@ -357,6 +378,7 @@ describe('create/createTokens', function () {
     var MACKEY = 'somerandommac';
     var userAgent = 'Mozilla';
     var req;
+    var res;
     var options;
 
     beforeEach(function () {
@@ -364,6 +386,9 @@ describe('create/createTokens', function () {
             headers: {
                 'user-agent': userAgent
             }
+        };
+        res = {
+            locals: {}
         };
         options = {
             secret: SECRET,
@@ -404,7 +429,7 @@ describe('create/createTokens', function () {
 
     it('Should create a sealed header and cookie token', function (done) {
 
-        var tokens = jwtCsrf.createTokens(options);
+        var tokens = jwtCsrf.createTokens(options, res);
 
         // fuggit
         jsonwebtoken.verify(tokens.header, SECRET, function (err, decoded) {
@@ -433,6 +458,9 @@ describe('validate', function () {
     var token = {
         id: uuid.v4()
     };
+    var res = {
+        locals: {}
+    };
 
     var options;
     var tokens;
@@ -442,7 +470,7 @@ describe('validate', function () {
             secret: SECRET,
             macKey: MACKEY
         };
-        tokens = jwtCsrf.createTokens(options);
+        tokens = jwtCsrf.createTokens(options, res);
     });
 
     describe('Happy', function () {
