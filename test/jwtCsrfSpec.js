@@ -32,6 +32,228 @@ function getSignedTokens() {
     };
 }
 
+describe('token backwards compatibility', function () {
+
+    var SECRET = 'somerandomsecret';
+    var MACKEY = 'somerandommac';
+    var userAgent = 'Mozilla';
+    var res = {
+        locals: {}
+    };
+
+    function constructToken(customAgent, payerId) {
+        var data = {
+            uid: payerId
+        };
+
+        return JSON.stringify(data);
+    }
+
+    var options;
+    var tokens;
+
+    beforeEach(function () {
+        options = {
+            secret: SECRET,
+            macKey: MACKEY
+        };
+        tokens = jwtCsrf.createTokens(options, res);
+    });
+
+    describe('Happy', function () {
+        it('Should work for No login happy case', function (done) {
+
+            var token = constructToken(userAgent, 'x');
+
+            var jwtData = jsonwebtoken.sign({
+                token: lib.encrypt(SECRET, MACKEY, token)
+            }, SECRET);
+
+            var req = {
+                headers: {
+                    'x-csrf-jwt': jwtData,
+                    'user-agent': userAgent
+                }
+            };
+
+            jwtCsrf.validateOldToken(options, req).then(function (data) {
+                assert(data, 'Expect verification to succeed');
+                done();
+            });
+        });
+
+        it('Should work for login happy case', function (done) {
+
+            var token = constructToken(userAgent, '1234');
+
+            var jwtData = jsonwebtoken.sign({
+                token: lib.encrypt(SECRET, MACKEY, token)
+            }, SECRET);
+
+            var req = {
+                headers: {
+                    'x-csrf-jwt': jwtData,
+                    'user-agent': userAgent
+                },
+                user: {
+                    encryptedAccountNumber: '1234'
+                }
+            };
+
+            jwtCsrf.validateOldToken(options, req).then(function (data) {
+                assert(data, 'Expect verification to succeed ');
+                done();
+            });
+        });
+    });
+
+    describe('Unhappy', function () {
+        it('Should fail for mismatched payer Id in loggedin case', function (done) {
+
+            var token = constructToken(userAgent, "1234");
+
+            var jwtData = jsonwebtoken.sign({
+                token: lib.encrypt(SECRET, MACKEY, token)
+            }, SECRET);
+
+            var req = {
+                headers: {
+                    'x-csrf-jwt': jwtData,
+                    'user-agent': userAgent
+                },
+                user: {
+                    encryptedAccountNumber: "123443223432"
+                }
+            };
+
+            jwtCsrf.validateOldToken(options, req)
+                .catch(function (err) {
+                    assert.equal(err.code, 'DIFF_PAYERID');
+                    done();
+                });
+        });
+
+        it('Should fail for missing payer Id in loggedin case', function (done) {
+
+            var token = constructToken(userAgent, 'not_logged_in');
+
+            var jwtData = jsonwebtoken.sign({
+                token: lib.encrypt(SECRET, MACKEY, token)
+            }, SECRET);
+
+            var req = {
+                headers: {
+                    'x-csrf-jwt': jwtData,
+                    'user-agent': userAgent
+                },
+                user: {
+                    encryptedAccountNumber: 123443223432
+                }
+            };
+
+            jwtCsrf.validateOldToken(options, req)
+                .catch(function (err) {
+                    assert.equal(err.code, 'NOT_LOGGED_IN_TOKEN');
+                    done();
+                });
+        });
+
+        it('Should fail for missing payer Id in loggedin case', function (done) {
+
+            var token = constructToken(userAgent, undefined);
+
+            var jwtData = jsonwebtoken.sign({
+                token: lib.encrypt(SECRET, MACKEY, token)
+            }, SECRET);
+
+            var req = {
+                headers: {
+                    'x-csrf-jwt': jwtData,
+                    'user-agent': userAgent
+                },
+                user: {
+                    encryptedAccountNumber: 123443223432
+                }
+            };
+
+            jwtCsrf.validateOldToken(options, req)
+                .catch(function (err) {
+                    assert.equal(err.code, 'DIFF_PAYERID');
+                    done();
+                });
+        });
+
+        it('Should fail for expired token', function (done) {
+
+            var token = "testing";
+
+            var jwtData = jsonwebtoken.sign({
+                token: lib.encrypt(SECRET, MACKEY, token)
+            }, SECRET, {
+                expiresInMinutes: -1
+            });
+
+            var req = {
+                headers: {
+                    'x-csrf-jwt': jwtData,
+                    'user-agent': userAgent
+                }
+            };
+
+
+            jwtCsrf.validateOldToken(options, req)
+                .catch(function (err) {
+                    assert.equal(err.code, 'TOKEN_EXPIRED');
+                    done();
+                });
+        });
+
+        it('Should fail if token not valid JSON', function (done) {
+
+            var token = '';
+
+            var jwtData = jsonwebtoken.sign({
+                token: lib.encrypt(SECRET, MACKEY, token)
+            }, SECRET);
+
+            var req = {
+                headers: {
+                    'x-csrf-jwt': jwtData,
+                    'user-agent': userAgent
+                }
+            };
+
+            jwtCsrf.validateOldToken(options, req)
+                .catch(function (err) {
+                    assert.equal(err.code, 'DECRYPT_EXCEPTION');
+                    done();
+                });
+        });
+
+        it('should fail if token is not object', function (done) {
+            var token = 'something';
+
+            var jwtData = jsonwebtoken.sign({
+                token: lib.encrypt(SECRET, MACKEY, token)
+            }, SECRET);
+
+            var req = {
+                headers: {
+                    'x-csrf-jwt': jwtData,
+                    'user-agent': userAgent
+                }
+            };
+
+            jwtCsrf.validateOldToken(options, req)
+                .catch(function (err) {
+                    assert.equal(err.code, 'DECRYPT_EXCEPTION');
+                    done();
+                });
+        });
+
+    });
+});
+
 describe('middleware', function () {
 
     var SECRET = 'somerandomsecret';
@@ -527,22 +749,24 @@ describe('validate', function () {
                 });
         });
 
-        it('Should fail if a cookie token is not provided', function (done) {
-            var req = {
-                headers: {
-                    'x-csrf-jwt': tokens.header,
-                    'user-agent': userAgent
-                },
-                cookies: {}
-            };
+        // --- OLD CODE START ---
+        // it('Should fail if a cookie token is not provided', function (done) {
+        //     var req = {
+        //         headers: {
+        //             'x-csrf-jwt': tokens.header,
+        //             'user-agent': userAgent
+        //         },
+        //         cookies: {}
+        //     };
 
-            return jwtCsrf.validate(options, req)
-                .catch(function (err) {
-                    assert(err, 'Expect verification to fail');
-                    assert.equal(err.code, 'MISSING_COOKIE', 'Error code is INVALID_TOKEN');
-                    done();
-                });
-        });
+        //     return jwtCsrf.validate(options, req)
+        //         .catch(function (err) {
+        //             assert(err, 'Expect verification to fail');
+        //             assert.equal(err.code, 'MISSING_COOKIE', 'Error code is INVALID_TOKEN');
+        //             done();
+        //         });
+        // });
+        // --- OLD CODE END ---
 
         it('Should fail for expired token', function (done) {
 

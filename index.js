@@ -10,6 +10,12 @@ var decrypt = require('./lib').decrypt;
 
 var DEFAULT_EXPIRATION_IN_MINUTES = 20;
 
+// --- OLD CODE START ---
+function toString(x) {
+    return x === undefined ? 'undefined' : ( typeof x === 'string' ? x : JSON.stringify(x) );
+}
+// --- OLD CODE END ---
+
 /**
  * For normalizing errors by adding a code and message
  *
@@ -133,6 +139,44 @@ function isValidTokenType(token, type) {
 }
 
 /**
+ * Checks if an old JWT token is valid using these checks:
+ * 1. If the header token exists
+ * 2. If the token is a valid JWT
+ * 3. If the token has not expired
+ * 4. If the user is logged in and does not have a "not_logged_in" token.
+ * 5. If the user is logged in and their encrypted account number matches the token
+ *
+ * If all of those checks pass, the JWT token is valid.
+ *
+ * @param {Object} options - Must contain "secret" and "macKey"
+ * @param {Object} req - Express request object
+ * @returns {Promise}
+ */
+function validateOldToken(options, req) {
+    var token = req.headers && req.headers['x-csrf-jwt'];
+    var isLoggedIn = req && req.user;
+
+    return verifyJWT(token, options).then(function (headerToken) {
+
+        // If this is a authenticated user, then verify the payerId in jwtToken with payerId in req.user.
+        if (isLoggedIn) {
+
+            // Check payerId in token
+            var inputPayerId = headerToken.uid;
+            var userPayerId = toString(req.user.encryptedAccountNumber);
+
+            if (inputPayerId === 'not_logged_in') {
+                throw createError('NOT_LOGGED_IN_TOKEN', 'not logged in token vs user [' + userPayerId + ']');
+            } else if (inputPayerId !== userPayerId) {
+                throw createError('DIFF_PAYERID', 'diff payerId [' + inputPayerId + '] vs [' + userPayerId + ']');
+            }
+        }
+
+        return true;
+    });
+}
+
+/**
  * Checks if a JWT is valid by using these checks:
  * 1. If the header and cookie tokens exist
  * 2. If the tokens are valid JWTs
@@ -196,6 +240,7 @@ module.exports = {
     create: create,
     createTokens: createTokens,
     validate: validate,
+    validateOldToken: validateOldToken,
 
     middleware: function (options) {
 
@@ -239,21 +284,28 @@ module.exports = {
 
             // Validate JWT on incoming request.
             if (req.method !== 'GET' && req.method !== 'HEAD' && excludeUrls.indexOf(req.originalUrl) === -1) {
-                return validate(options, req)
-                    .then(function (result) {
-                        next();
-                    }).catch(function (err) {
-                        res.status(401);
+                return bb.any([
+                    validate(options, req),
+                    validateOldToken(options, req)
+                ]).then(function () {
+                    next();
+                }).catch(function (err) {
+                    // lol
+                    if (err instanceof Array) {
+                        err = err[0];
+                    }
 
-                        err.code = err.code || 'DECRYPT_FAILED';
-                        err.message = err.message || 'decrypt token failed';
+                    res.status(401);
 
-                        var invalidErr = new Error('Invalid CSRF token: ' + err.message);
-                        invalidErr.code = 'EINVALIDCSRF_' + err.code;
-                        invalidErr.details = err.message;
+                    err.code = err.code || 'DECRYPT_FAILED';
+                    err.message = err.message || 'decrypt token failed';
 
-                        return next(invalidErr);
-                    });
+                    var invalidErr = new Error('Invalid CSRF token: ' + err.message);
+                    invalidErr.code = 'EINVALIDCSRF_' + err.code;
+                    invalidErr.details = err.message;
+
+                    return next(invalidErr);
+                });
             }
 
             next();
