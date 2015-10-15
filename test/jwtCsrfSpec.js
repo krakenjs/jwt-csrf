@@ -1,639 +1,546 @@
 'use strict';
 
-var lib = require('../lib/index');
+
 var assert = require('chai').assert;
-var jsonwebtoken = require('jsonwebtoken');
-var uuid = require('node-uuid');
+var underscore = require('underscore');
 var jwtCsrf = require('../index');
 
-function getTokens() {
-    return {
-        header: JSON.stringify({
-            uuid: uuid.v4(),
-            type: 'header'
-        }),
-        cookie: JSON.stringify({
-            uuid: uuid.v4(),
-            type: 'cookie'
-        })
-    };
+var SECRET = 'somerandomsecret';
+var MACKEY = 'somerandommackey';
+
+var HEADER_NAME = 'csrf';
+
+
+function merge(obj, props) {
+    obj = obj || {};
+    props = props || {};
+    underscore.extend(props, obj);
+    underscore.extend(obj, props);
+    return obj;
 }
 
-function getSignedTokens() {
-    var tokens = getTokens();
 
-    return {
-        header: jsonwebtoken.sign({
-            token: lib.encrypt(SECRET, MACKEY, tokens.header)
-        }, SECRET),
-        cookie: jsonwebtoken.sign({
-            token: lib.encrypt(SECRET, MACKEY, tokens.cookie)
-        }, SECRET)
-    };
+function getOptions(obj) {
+    return merge(obj, {
+        headerName: HEADER_NAME,
+        secret: SECRET,
+        macKey: MACKEY
+    });
 }
 
-describe('token backwards compatibility', function () {
-
-    var SECRET = 'somerandomsecret';
-    var MACKEY = 'somerandommac';
-    var userAgent = 'Mozilla';
-    var res = {
-        locals: {}
-    };
-
-    function constructToken(customAgent, payerId) {
-        var data = {
-            uid: payerId
-        };
-
-        return JSON.stringify(data);
-    }
-
-    var options;
-    var tokens;
-
-    beforeEach(function () {
-        options = {
-            secret: SECRET,
-            macKey: MACKEY
-        };
-        tokens = jwtCsrf.createTokens(options, res);
+function getReq(obj) {
+    return merge(obj, {
+        get: function() {
+            return 'https://www.paypal.com';
+        },
+        protocol: 'https',
+        headers: {},
+        cookies: {}
     });
+}
 
-    describe('Happy', function () {
-        it('Should work for No login happy case', function (done) {
+function getRes(obj) {
+    return merge(obj, {
+        locals: {},
+        cookies: {},
+        headers: {},
+        status: function (statusCode) {
 
-            var token = constructToken(userAgent, 'x');
+        },
+        writeHead: function () {
 
-            var jwtData = jsonwebtoken.sign({
-                token: lib.encrypt(SECRET, MACKEY, token)
-            }, SECRET);
-
-            var req = {
-                headers: {
-                    'x-csrf-jwt': jwtData,
-                    'user-agent': userAgent
-                }
-            };
-
-            jwtCsrf.validateOldToken(options, req).then(function (data) {
-                assert(data, 'Expect verification to succeed');
-                done();
-            });
-        });
-
-        it('Should work for login happy case', function (done) {
-
-            var token = constructToken(userAgent, '1234');
-
-            var jwtData = jsonwebtoken.sign({
-                token: lib.encrypt(SECRET, MACKEY, token)
-            }, SECRET);
-
-            var req = {
-                headers: {
-                    'x-csrf-jwt': jwtData,
-                    'user-agent': userAgent
-                },
-                user: {
-                    encryptedAccountNumber: '1234'
-                }
-            };
-
-            jwtCsrf.validateOldToken(options, req).then(function (data) {
-                assert(data, 'Expect verification to succeed ');
-                done();
-            });
-        });
-    });
-
-    describe('Unhappy', function () {
-        it('Should fail for mismatched payer Id in loggedin case', function (done) {
-
-            var token = constructToken(userAgent, "1234");
-
-            var jwtData = jsonwebtoken.sign({
-                token: lib.encrypt(SECRET, MACKEY, token)
-            }, SECRET);
-
-            var req = {
-                headers: {
-                    'x-csrf-jwt': jwtData,
-                    'user-agent': userAgent
-                },
-                user: {
-                    encryptedAccountNumber: "123443223432"
-                }
-            };
-
-            jwtCsrf.validateOldToken(options, req)
-                .catch(function (err) {
-                    assert.equal(err.message, 'EINVALIDCSRF_OLDTOKEN_DIFF_PAYERID');
-                    done();
-                });
-        });
-
-        it('Should fail for missing payer Id in loggedin case', function (done) {
-
-            var token = constructToken(userAgent, 'not_logged_in');
-
-            var jwtData = jsonwebtoken.sign({
-                token: lib.encrypt(SECRET, MACKEY, token)
-            }, SECRET);
-
-            var req = {
-                headers: {
-                    'x-csrf-jwt': jwtData,
-                    'user-agent': userAgent
-                },
-                user: {
-                    encryptedAccountNumber: 123443223432
-                }
-            };
-
-            jwtCsrf.validateOldToken(options, req)
-                .catch(function (err) {
-                    assert.equal(err.message, 'EINVALIDCSRF_OLDTOKEN_NOT_LOGGED_IN_TOKEN');
-                    done();
-                });
-        });
-
-        it('Should fail for missing payer Id in loggedin case', function (done) {
-
-            var token = constructToken(userAgent, undefined);
-
-            var jwtData = jsonwebtoken.sign({
-                token: lib.encrypt(SECRET, MACKEY, token)
-            }, SECRET);
-
-            var req = {
-                headers: {
-                    'x-csrf-jwt': jwtData,
-                    'user-agent': userAgent
-                },
-                user: {
-                    encryptedAccountNumber: 123443223432
-                }
-            };
-
-            jwtCsrf.validateOldToken(options, req)
-                .catch(function (err) {
-                    assert.equal(err.message, 'EINVALIDCSRF_OLDTOKEN_DIFF_PAYERID');
-                    done();
-                });
-        });
-
-        it('Should fail for expired token', function (done) {
-
-            var token = "testing";
-
-            var jwtData = jsonwebtoken.sign({
-                token: lib.encrypt(SECRET, MACKEY, token)
-            }, SECRET, {
-                expiresInMinutes: -1
-            });
-
-            var req = {
-                headers: {
-                    'x-csrf-jwt': jwtData,
-                    'user-agent': userAgent
-                }
-            };
-
-
-            jwtCsrf.validateOldToken(options, req)
-                .catch(function (err) {
-                    assert.equal(err.message, 'EINVALIDCSRF_JWT_EXPIRED');
-                    done();
-                });
-        });
-
-        it('Should fail if token not valid JSON', function (done) {
-
-            var token = '';
-
-            var jwtData = jsonwebtoken.sign({
-                token: lib.encrypt(SECRET, MACKEY, token)
-            }, SECRET);
-
-            var req = {
-                headers: {
-                    'x-csrf-jwt': jwtData,
-                    'user-agent': userAgent
-                }
-            };
-
-            jwtCsrf.validateOldToken(options, req)
-                .catch(function (err) {
-                    assert.equal(err.message, 'Unexpected end of input');
-                    done();
-                });
-        });
-
-        it('should fail if token is not object', function (done) {
-            var token = 'something';
-
-            var jwtData = jsonwebtoken.sign({
-                token: lib.encrypt(SECRET, MACKEY, token)
-            }, SECRET);
-
-            var req = {
-                headers: {
-                    'x-csrf-jwt': jwtData,
-                    'user-agent': userAgent
-                }
-            };
-
-            jwtCsrf.validateOldToken(options, req)
-                .catch(function (err) {
-                    assert.equal(err.message, 'Unexpected token s');
-                    done();
-                });
-        });
-
-    });
-});
-
-describe('middleware', function () {
-
-    var SECRET = 'somerandomsecret';
-    var MACKEY = 'somerandommac';
-    var userAgent = 'Mozilla';
-    var options;
-    var tokens;
-    var res;
-
-    beforeEach(function () {
-        options = {
-            secret: SECRET,
-            macKey: MACKEY
-        };
-        res = {
-            locals: {}
+        },
+        setHeader: function (key, value) {
+            assert.equal(key, HEADER_NAME, 'header has been set');
+            assert(value, 'header value exists');
+            this.headers[key] = value;
+        },
+        encryptedCookie: function (key, value, options) {
+            assert.equal(key, HEADER_NAME, 'cookie has been set');
+            assert(value, 'cookie value exists');
+            assert(options, 'cookie options exists');
+            assert(options.httpOnly, 'cookie options exists');
+            this.cookies[key] = value;
         }
-        tokens = jwtCsrf.createTokens(options, res);
+    });
+}
+
+function assertError(err, message) {
+    assert(err, 'Expected ' + message);
+    assert.equal(err.message, message);
+}
+
+function assertNotError(err) {
+    if (err) {
+        throw err;
+    }
+}
+
+function handleCSRFError(err) {
+    if (err && !(err instanceof jwtCsrf.CSRFError)) {
+        throw err;
+    }
+}
+
+function runMiddleware(req, res, options, callback) {
+
+    options = getOptions(options)
+    req = getReq(req);
+    res = getRes(res);
+
+    jwtCsrf.middleware(options)(req, res, function(err) {
+
+        if (err) {
+            handleCSRFError(err)
+        }
+
+        try {
+            res.writeHead(200);
+        }
+        catch (err) {
+            handleCSRFError(err);
+            return callback(err);
+        }
+
+        return callback(err);
     });
 
-    describe('Happy', function () {
+}
 
-        it('Should not validate GET requests', function (done) {
 
-            var req = {
-                method: 'GET'
-            };
 
-            var middleware = jwtCsrf.middleware(options);
 
-            middleware(req, {}, function(err, result){
-                assert(!err, 'Expect next() to be called without error');
-                done();
-            });
-        });
+describe('middleware', function() {
 
-        it('Should not validate HEAD requests', function (done) {
 
-            var req = {
-                method: 'HEAD'
-            };
+    it('should return and validate tokens for GET and POST in AUTHED_TOKEN mode', function() {
 
-            var middleware = jwtCsrf.middleware(options);
+        var req = {method: 'GET'};
+        var res = {};
+        var options = {csrfDriver: 'AUTHED_TOKEN'};
 
-            middleware(req, {}, function(err, result){
-                assert(!err, 'Expect next() to be called without error');
-                done();
-            });
-        });
+        runMiddleware(req, res, options, function(err) {
 
-        it('Should call next if token is verified and valid', function (done) {
+            assertNotError(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(!res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
 
-            var tokens = jwtCsrf.createTokens(options, {
-                locals: {}
-            });
+            req.method = 'POST';
+            req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
 
-            var req = {
-                headers: {
-                    'x-csrf-jwt': tokens.header,
-                    'user-agent': userAgent
-                },
-                cookies: {
-                    'csrf-jwt': tokens.cookie
-                }
-            };
+            runMiddleware(req, res, options, function(err) {
 
-            var res = {
-                status: function (statusCode) {
-                    assert(!statusCode, 'Ensure there is no status code set, defaults to 200');
-                }
-            };
-
-            var middleware = jwtCsrf.middleware(options);
-
-            middleware(req, res, function(err, result){
-                assert(!err, 'Expect next() to be called without error');
-                done();
-            });
-        });
-
-        it('Should set header and token on response out', function () {
-
-            var res = {
-                locals: {},
-                status: function (statusCode) {
-                    assert(!statusCode, 'Ensure there is no status code set, defaults to 200');
-                },
-                writeHead: function () {
-                    // noop
-                },
-                setHeader: function (key, value) {
-                    assert.equal(key, 'x-csrf-jwt', 'x-csrf-jwt header has been set');
-                    assert(value, 'x-csrf-jwt header value exists');
-                },
-                encryptedCookie: function (key, value, options) {
-                    assert.equal(key, 'csrf-jwt', 'csrf-jwt cookie has been set');
-                    assert(value, 'csrf-jwt cookie value exists');
-                    assert(options, 'csrf-jwt cookie options exists');
-                    assert(options.httpOnly, 'csrf-jwt cookie options exists');
-                }
-            };
-
-            var tokens = jwtCsrf.createTokens(options, res);
-
-            var req = {
-                headers: {
-                    'x-csrf-jwt': tokens.header,
-                    'user-agent': userAgent
-                },
-                cookies: {
-                    'csrf-jwt': tokens.cookie
-                },
-                get: function () {
-                    return 'https://www.paypal.com';
-                }
-            };
-
-            var middleware = jwtCsrf.middleware(options);
-
-            middleware(req, res, function(err, result){
-                res.writeHead();
-                assert(!err, 'Expect next() to be called without error');
-            });
-        });
-
-    });
-
-    describe('Unhappy', function () {
-
-        it('Should throw a 401 if there are no tokens', function (done) {
-
-            var tokens = jwtCsrf.createTokens(options, {
-                locals: {}
-            });
-
-            var req = {
-                headers: {
-                    'user-agent': userAgent
-                }
-            };
-
-            var res = {
-                status: function (statusCode) {
-                    assert.equal(statusCode, 401, 'Ensure a 401 status code was set');
-                }
-            };
-
-            var middleware = jwtCsrf.middleware(options);
-
-            middleware(req, res, function(err, result){
-                assert(err, 'Expect an error to be thrown');
-                assert(!result, 'Expect an error to be thrown');
-                done();
-            });
-        });
-
-        it('Should throw a 401 if there is only a cookie token', function (done) {
-
-            var tokens = jwtCsrf.createTokens(options, {
-                locals: {}
-            });
-
-            var req = {
-                headers: {
-                    'user-agent': userAgent
-                },
-                cookies: {
-                    'csrf-jwt': tokens.cookie
-                }
-            };
-
-            var res = {
-                status: function (statusCode) {
-                    assert.equal(statusCode, 401, 'Ensure a 401 status code was set');
-                }
-            };
-
-            var middleware = jwtCsrf.middleware(options);
-
-            middleware(req, res, function(err, result){
-                assert(err, 'Expect an error to be thrown');
-                assert(!result, 'Expect an error to be thrown');
-                done();
+                assertNotError(err);
+                assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                assert(!res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
             });
         });
     });
-});
 
-describe('create/createTokens', function () {
+    it('should return and validate tokens for GET and POST in AUTHED_TOKEN mode with an authenticated buyer', function() {
 
-    var SECRET = 'somerandomsecret';
-    var MACKEY = 'somerandommac';
-    var userAgent = 'Mozilla';
-    var req;
-    var res;
-    var options;
-
-    beforeEach(function () {
-        req = {
-            headers: {
-                'user-agent': userAgent
+        var req = {
+            method: 'GET',
+            user: {
+                encryptedAccountNumber: 'XYZ'
             }
         };
-        res = {
-            locals: {}
-        };
-        options = {
-            secret: SECRET,
-            macKey: MACKEY,
-            expiresInMinutes: 20
-        };
-    });
+        var res = {};
+        var options = {csrfDriver: 'AUTHED_TOKEN'};
 
-    it('Should create a sealed header token', function (done) {
+        runMiddleware(req, res, options, function(err) {
 
-        var data = jwtCsrf.create(options, {
-            type: 'header',
-            id: uuid.v4()
-        });
+            assertNotError(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(!res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
 
-        jsonwebtoken.verify(data, SECRET, function (err, decoded) {
-            var verifiedToken = JSON.parse(lib.decrypt(SECRET, MACKEY, decoded.token));
-            assert.equal(verifiedToken.type, 'header', 'Must have token type of header');
-            assert(verifiedToken.id, 'Should have an id');
-            done();
-        });
-    });
+            req.method = 'POST';
+            req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
 
-    it('Should create a sealed cookie token', function (done) {
+            runMiddleware(req, res, options, function(err) {
 
-        var data = jwtCsrf.create(options, {
-            type: 'cookie',
-            id: uuid.v4()
-        });
-
-        jsonwebtoken.verify(data, SECRET, function (err, decoded) {
-            var verifiedToken = JSON.parse(lib.decrypt(SECRET, MACKEY, decoded.token));
-            assert.equal(verifiedToken.type, 'cookie', 'Must have token type of cookie');
-            assert(verifiedToken.id, 'Should have an id');
-            done();
-        });
-    });
-
-    it('Should create a sealed header and cookie token', function (done) {
-
-        var tokens = jwtCsrf.createTokens(options, res);
-
-        // fuggit
-        jsonwebtoken.verify(tokens.header, SECRET, function (err, decoded) {
-            var verifiedToken = JSON.parse(lib.decrypt(SECRET, MACKEY, decoded.token));
-
-            assert.equal(verifiedToken.type, 'header', 'Must have token type of header');
-            assert(verifiedToken.id, 'Should have an id');
-
-            jsonwebtoken.verify(tokens.cookie, SECRET, function (err, decoded) {
-                var verifiedToken = JSON.parse(lib.decrypt(SECRET, MACKEY, decoded.token));
-
-                assert.equal(verifiedToken.type, 'cookie', 'Must have token type of cookie');
-                assert(verifiedToken.id, 'Should have an id');
-
-                done();
-            });
-        });
-    });
-});
-
-describe('validate', function () {
-
-    var SECRET = 'somerandomsecret';
-    var MACKEY = 'somerandommac';
-    var userAgent = 'Mozilla';
-    var token = {
-        id: uuid.v4()
-    };
-    var res = {
-        locals: {}
-    };
-
-    var options;
-    var tokens;
-
-    beforeEach(function () {
-        options = {
-            secret: SECRET,
-            macKey: MACKEY
-        };
-        tokens = jwtCsrf.createTokens(options, res);
-    });
-
-    describe('Happy', function () {
-        it('Should pass validation rules', function (done) {
-            var req = {
-                headers: {
-                    'x-csrf-jwt': tokens.header,
-                    'user-agent': userAgent
-                },
-                cookies: {
-                    'csrf-jwt': tokens.cookie
-                }
-            };
-
-            return jwtCsrf.validate(options, req).then(function (data) {
-                assert(data, 'Expect verification to pass');
-                done();
+                assertNotError(err);
+                assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                assert(!res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
             });
         });
     });
 
-    describe('Unhappy', function () {
-        it('Should fail if no tokens are provided', function (done) {
-            var req = {
-                headers: {
-                    'user-agent': userAgent
-                },
-                cookies: {}
-            };
+    it('should return and validate tokens for GET and POST in DOUBLE_SUBMIT mode', function() {
 
-            return jwtCsrf.validate(options, req)
-                .catch(function (err) {
-                    assert(err, 'Expect verification to fail');
-                    assert.equal(err.message, 'EINVALIDCSRF_NEWTOKEN_MISSING_TOKENS');
-                    done();
+        var req = {method: 'GET'};
+        var res = {};
+        var options = {csrfDriver: 'DOUBLE_SUBMIT'};
+
+        runMiddleware(req, res, options, function(err) {
+
+            assertNotError(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+
+            req.method = 'POST';
+            req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
+            req.cookies[HEADER_NAME] = res.cookies[HEADER_NAME];
+
+            runMiddleware(req, res, options, function(err) {
+
+                assertNotError(err);
+                assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+            });
+        });
+    });
+
+    it('should return and validate tokens for GET in AUTHED_TOKEN and POST in DOUBLE_SUBMIT mode', function() {
+
+        var req = {method: 'GET'};
+        var res = {};
+        var options = {csrfDriver: 'AUTHED_TOKEN'};
+
+        runMiddleware(req, res, options, function(err) {
+
+            assertNotError(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(!res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+
+            options.csrfDriver = 'DOUBLE_SUBMIT';
+            req.method = 'POST';
+            req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
+
+            runMiddleware(req, res, options, function(err) {
+
+                assertNotError(err);
+                assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be present');
+            });
+        });
+    });
+
+
+    it('should return and validate tokens for GET in DOUBLE_SUBMIT and POST in AUTHED_TOKEN mode', function() {
+
+        var req = {method: 'GET'};
+        var res = {};
+        var options = {csrfDriver: 'DOUBLE_SUBMIT'};
+
+        runMiddleware(req, res, options, function(err) {
+
+            assertNotError(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+
+            options.csrfDriver = 'AUTHED_TOKEN';
+            req.method = 'POST';
+            req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
+            req.cookies[HEADER_NAME] = res.cookies[HEADER_NAME];
+
+            runMiddleware(req, res, options, function(err) {
+
+                assertNotError(err);
+                assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be present');
+            });
+        });
+    });
+
+    it('should work when erratically changing between modes', function() {
+
+        var req = {method: 'GET'};
+        var res = {};
+        var options = {csrfDriver: 'AUTHED_TOKEN'};
+
+        runMiddleware(req, res, options, function(err) {
+
+            assertNotError(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(!res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+
+            options.csrfDriver = 'DOUBLE_SUBMIT';
+            req.method = 'POST';
+            req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
+
+            runMiddleware(req, res, options, function(err) {
+
+                assertNotError(err);
+                assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be present');
+
+                options.csrfDriver = 'AUTHED_TOKEN';
+                req.method = 'POST';
+                req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
+                req.cookies[HEADER_NAME] = res.cookies[HEADER_NAME];
+
+                runMiddleware(req, res, options, function(err) {
+
+                    assertNotError(err);
+                    assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                    assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be present');
+
+                    options.csrfDriver = 'DOUBLE_SUBMIT';
+                    req.method = 'POST';
+                    req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
+
+                    runMiddleware(req, res, options, function(err) {
+
+                        assertNotError(err);
+                        assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                        assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be present');
+                    });
                 });
-        });
-
-        it('Should fail if a header token is not provided', function (done) {
-            var req = {
-                headers: {
-                    'user-agent': userAgent
-                },
-                cookies: {
-                    'csrf-jwt': tokens.cookie
-                }
-            };
-
-            return jwtCsrf.validate(options, req)
-                .catch(function (err) {
-                    assert(err, 'Expect verification to fail');
-                    assert.equal(err.message, 'EINVALIDCSRF_NEWTOKEN_MISSING_HEADER', 'Error code is INVALID_TOKEN');
-                    done();
-                });
-        });
-
-        it('Should fail for expired token', function (done) {
-
-            var id = uuid.v4();
-
-            var headerToken = jwtCsrf.create({
-                secret: SECRET,
-                macKey: MACKEY,
-                expiresInMinutes: -1
-            }, {
-                id: id,
-                type: 'header'
             });
+        });
+    });
 
-            var cookieToken = jwtCsrf.create({
-                secret: SECRET,
-                macKey: MACKEY,
-                expiresInMinutes: -1
-            }, {
-                id: id,
-                type: 'cookie'
+
+
+
+    it('should fail for POST in AUTHED_TOKEN if no header is passed', function() {
+
+        var req = {method: 'POST'};
+        var res = {};
+        var options = {csrfDriver: 'AUTHED_TOKEN'};
+
+        runMiddleware(req, res, options, function(err) {
+
+            assertError(err, 'EINVALIDCSRF_TOKEN_NOT_IN_HEADER');
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(!res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+        });
+    });
+
+
+    it('should fail for POST in DOUBLE_SUBMIT if no cookie or header is passed', function() {
+
+        var req = {method: 'POST'};
+        var res = {};
+        var options = {csrfDriver: 'DOUBLE_SUBMIT'};
+
+        runMiddleware(req, res, options, function(err) {
+
+            assertError(err, 'EINVALIDCSRF_TOKEN_NOT_IN_HEADER');
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be present');
+        });
+    });
+
+    it('should fail POST in DOUBLE_SUBMIT mode if no header is present', function() {
+
+        var req = {method: 'GET'};
+        var res = {};
+        var options = {csrfDriver: 'DOUBLE_SUBMIT'};
+
+        runMiddleware(req, res, options, function(err) {
+
+            assertNotError(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+
+            req.method = 'POST';
+            req.cookies[HEADER_NAME] = res.cookies[HEADER_NAME];
+
+            runMiddleware(req, res, options, function(err) {
+
+                assertError(err, 'EINVALIDCSRF_TOKEN_NOT_IN_HEADER');
+                assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
             });
+        });
+    });
 
-            var req = {
-                headers: {
-                    'x-csrf-jwt': headerToken,
-                    'user-agent': userAgent
-                },
-                cookies: {
-                    'csrf-jwt': cookieToken
-                }
+    it('should fail POST in DOUBLE_SUBMIT mode if no cookie is present', function() {
+
+        var req = {method: 'GET'};
+        var res = {};
+        var options = {csrfDriver: 'DOUBLE_SUBMIT'};
+
+        runMiddleware(req, res, options, function(err) {
+
+            assertNotError(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+
+            req.method = 'POST';
+            req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
+
+            runMiddleware(req, res, options, function(err) {
+
+                assertError(err, 'EINVALIDCSRF_TOKEN_NOT_IN_COOKIE');
+                assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+            });
+        });
+    });
+
+
+    it('should fail POST in AUTHED_TOKEN mode with an authenticated buyer but not an authenticated token', function() {
+
+        var req = {
+            method: 'GET'
+        };
+        var res = {};
+        var options = {csrfDriver: 'AUTHED_TOKEN'};
+
+        runMiddleware(req, res, options, function(err) {
+
+            assertNotError(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(!res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+
+            req.method = 'POST';
+            req.user = {
+                encryptedAccountNumber: 'XYZ'
             };
+            req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
 
-            return jwtCsrf.validate(options, req)
-                .catch(function (err) {
-                    assert.equal(err.message, 'EINVALIDCSRF_JWT_EXPIRED', 'Error code is TOKEN_EXPIRED');
-                    done();
+            runMiddleware(req, res, options, function(err) {
+
+                assertError(err, 'EINVALIDCSRF_TOKEN_PAYERID_MISSING');
+                assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                assert(!res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+            });
+        });
+    });
+
+
+    it('should fail POST in AUTHED_TOKEN mode with an authenticated buyer and an authenticated token for a different buyer', function() {
+
+        var req = {
+            method: 'GET',
+            user: {
+                encryptedAccountNumber: 'ABC'
+            }
+        };
+        var res = {};
+        var options = {csrfDriver: 'AUTHED_TOKEN'};
+
+        runMiddleware(req, res, options, function(err) {
+
+            assertNotError(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(!res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+
+            req.method = 'POST';
+            req.user = {
+                encryptedAccountNumber: 'XYZ'
+            };
+            req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
+
+            runMiddleware(req, res, options, function(err) {
+
+                assertError(err, 'EINVALIDCSRF_TOKEN_PAYERID_MISMATCH');
+                assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                assert(!res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+            });
+        });
+    });
+
+    it('should fail POST in DOUBLE_SUBMIT mode when passing a header value as a cookie', function() {
+
+        var req = {method: 'GET'};
+        var res = {};
+        var options = {csrfDriver: 'DOUBLE_SUBMIT'};
+
+        runMiddleware(req, res, options, function(err) {
+
+            assertNotError(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+
+            req.method = 'POST';
+            req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
+            req.cookies[HEADER_NAME] = res.headers[HEADER_NAME];
+
+            runMiddleware(req, res, options, function(err) {
+
+                assertError(err, 'EINVALIDCSRF_GOT_HEADER_EXPECTED_COOKIE');
+                assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+            });
+        });
+    });
+
+    it('should fail POST in DOUBLE_SUBMIT mode when passing a cookie value as a header', function() {
+
+        var req = {method: 'GET'};
+        var res = {};
+        var options = {csrfDriver: 'DOUBLE_SUBMIT'};
+
+        runMiddleware(req, res, options, function(err) {
+
+            assertNotError(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+
+            req.method = 'POST';
+            req.headers[HEADER_NAME] = res.cookies[HEADER_NAME];
+            req.cookies[HEADER_NAME] = res.cookies[HEADER_NAME];
+
+            runMiddleware(req, res, options, function(err) {
+
+                assertError(err, 'EINVALIDCSRF_GOT_COOKIE_EXPECTED_HEADER');
+                assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+            });
+        });
+    });
+
+    it('should fail POST in DOUBLE_SUBMIT mode when passing a cookie value as a header and vice versa', function() {
+
+        var req = {method: 'GET'};
+        var res = {};
+        var options = {csrfDriver: 'DOUBLE_SUBMIT'};
+
+        runMiddleware(req, res, options, function(err) {
+
+            assertNotError(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+
+            req.method = 'POST';
+            req.headers[HEADER_NAME] = res.cookies[HEADER_NAME];
+            req.cookies[HEADER_NAME] = res.headers[HEADER_NAME];
+
+            runMiddleware(req, res, options, function(err) {
+
+                assertError(err, 'EINVALIDCSRF_GOT_COOKIE_EXPECTED_HEADER');
+                assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+            });
+        });
+    });
+
+    it('should fail POST in DOUBLE_SUBMIT mode when the token and header do not match', function() {
+
+        var req = {method: 'GET'};
+        var res = {};
+        var options = {csrfDriver: 'DOUBLE_SUBMIT'};
+
+        runMiddleware(req, res, options, function(err) {
+
+            assertNotError(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+            assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+
+            var oldCookie = res.cookies[HEADER_NAME];
+
+            runMiddleware(req, res, options, function(err) {
+
+                assertNotError(err);
+                assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
+
+
+                req.method = 'POST';
+                req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
+                req.cookies[HEADER_NAME] = oldCookie;
+
+                runMiddleware(req, res, options, function(err) {
+
+                    assertError(err, 'EINVALIDCSRF_HEADER_COOKIE_TOKEN_MISMATCH');
+                    assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+                    assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
                 });
+            });
         });
     });
 });

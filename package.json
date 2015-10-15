@@ -1,6 +1,6 @@
 {
   "name": "jwt-csrf",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "description": "A jwt middleware provider for hermes",
   "main": "index.js",
   "scripts": {
@@ -13,7 +13,8 @@
     "cryptutils-paypal": "^1.0.2",
     "jsonwebtoken": "~4.2.2",
     "node-uuid": "^1.4.3",
-    "on-headers": "~1.0.0"
+    "on-headers": "~1.0.0",
+    "underscore": "^1.8.3"
   },
   "devDependencies": {
     "chai": "^2.1.2",
