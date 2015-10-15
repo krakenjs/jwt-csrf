@@ -225,7 +225,7 @@ describe('token backwards compatibility', function () {
 
             jwtCsrf.validateOldToken(options, req)
                 .catch(function (err) {
-                    assert.equal(err.message, 'DECRYPT_EXCEPTION');
+                    assert.equal(err.message, 'EINVALIDCSRF_DECRYPT_EXCEPTION');
                     done();
                 });
         });
@@ -246,7 +246,7 @@ describe('token backwards compatibility', function () {
 
             jwtCsrf.validateOldToken(options, req)
                 .catch(function (err) {
-                    assert.equal(err.message, 'DECRYPT_EXCEPTION');
+                    assert.equal(err.message, 'EINVALIDCSRF_DECRYPT_EXCEPTION');
                     done();
                 });
         });
