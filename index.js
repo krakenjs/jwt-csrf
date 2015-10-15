@@ -2,11 +2,12 @@
 
 var jsonwebtoken = require('jsonwebtoken');
 var onHeaders = require('on-headers');
-var bb = require('bluebird');
 var uuid = require('node-uuid');
-
+var bb = require('bluebird');
 var encrypt = require('./lib').encrypt;
 var decrypt = require('./lib').decrypt;
+
+var AggregateError = bb.AggregateError;
 
 var DEFAULT_EXPIRATION_IN_MINUTES = 20;
 
@@ -20,13 +21,10 @@ function toString(x) {
  * For normalizing errors by adding a code and message
  *
  * @param {String} code - An error code (Ex: "TOKEN_EXPIRED")
- * @param {String} message - An error message (Ex: "Token was expired on 1/1/2015")
  * @returns {Error} - Returns a normalized error
  */
-function createError(code, message) {
-    var error = new Error(message);
-    error.code = code;
-    return error;
+function createError(code) {
+    return new Error('EINVALIDCSRF_' + code);
 }
 
 /**
@@ -101,16 +99,16 @@ function verifyJWT(token, options) {
             var data;
 
             if (err) {
-                // Normalizing error code
-                err.code = err.message ? err.message.substring(0, 25).replace(/ /, '_').toUpperCase() : 'VERIFY_FAILED';
 
-                // Re-writing JWT_EXPIRED error to include time it expired
-                if (err.code === 'JWT_EXPIRED') {
-                    err.message = 'token expired at ' + err.expiredAt;
-                    err.code = 'TOKEN_EXPIRED';
+                // Normalizing error code... Turning "jwt expired" into JWT_EXPIRED
+                err.message = err.message ? err.message.substring(0, 25).replace(/ /, '_').toUpperCase() : 'VERIFY_FAILED';
+
+                // Re-writing JWT_EXPIRED error to TOKEN_EXPIRED (normalizing a bit)
+                if (err.message === 'JWT_EXPIRED') {
+                    err.message = 'TOKEN_EXPIRED';
                 }
 
-                return reject(err);
+                return reject(createError(err.message));
             }
 
             // Attempting to decrypt payload (JSON.parse throws errors willy nilly :|)
@@ -118,8 +116,8 @@ function verifyJWT(token, options) {
                 var decryptedPayload = decrypt(options.secret, options.macKey, payload.token);
                 data = JSON.parse(decryptedPayload);
             } catch (err) {
-                err.code = 'DECRYPT_EXCEPTION';
-                return reject(err);
+                err.message = 'DECRYPT_EXCEPTION';
+                return reject(createError(err.message));
             }
 
             return resolve(data);
@@ -166,9 +164,9 @@ function validateOldToken(options, req) {
             var userPayerId = toString(req.user.encryptedAccountNumber);
 
             if (inputPayerId === 'not_logged_in') {
-                throw createError('NOT_LOGGED_IN_TOKEN', 'not logged in token vs user [' + userPayerId + ']');
+                throw createError('OLDTOKEN_NOT_LOGGED_IN_TOKEN');
             } else if (inputPayerId !== userPayerId) {
-                throw createError('DIFF_PAYERID', 'diff payerId [' + inputPayerId + '] vs [' + userPayerId + ']');
+                throw createError('OLDTOKEN_DIFF_PAYERID');
             }
         }
 
@@ -199,15 +197,15 @@ function validate(options, req) {
 
         // Being extra granular with our errors here (sorry)
         if (!header && !cookie) {
-            throw createError('MISSING_TOKENS', 'missing both tokens');
+            throw createError('NEWTOKEN_MISSING_TOKENS');
         }
 
         if (!header) {
-            throw createError('MISSING_HEADER', 'missing header token');
+            throw createError('NEWTOKEN_MISSING_HEADER');
         }
 
         if (!cookie) {
-            throw createError('MISSING_COOKIE', 'missing cookie token');
+            throw createError('NEWTOKEN_MISSING_COOKIE');
         }
 
         return bb.all([
@@ -217,17 +215,17 @@ function validate(options, req) {
 
             // Fail fast if the header and cookie tokens could not be decrypted
             if (!headerToken || !cookieToken) {
-                throw createError('DECRYPT_FAILED', 'failed to decrypt token');
+                throw createError('NEWTOKEN_DECRYPT_FAILED');
             }
 
             // Check that the tokens are equivalent
             if (headerToken.id !== cookieToken.id) {
-                throw createError('TOKEN_MISMATCH', 'tokens did not match');
+                throw createError('NEWTOKEN_TOKEN_MISMATCH');
             }
 
             // Check that the token types are correct
             if (!isValidTokenType(headerToken, 'header') || !isValidTokenType(cookieToken, 'cookie')) {
-                throw createError('INCORRECT_TOKEN_TYPE', 'incorrect token type');
+                throw createError('NEWTOKEN_INCORRECT_TOKEN_TYPE');
             }
 
             return true;
@@ -272,39 +270,24 @@ module.exports = {
                 });
             });
 
-            function handleError(err) {
-                res.status(401);
-
-                var invalidErr = new Error('Invalid CSRF token: ' + err.message);
-                invalidErr.code = 'EINVALIDCSRF_' + err.code;
-                invalidErr.details = err.message;
-
-                return next(invalidErr);
-            }
-
             // Validate JWT on incoming request.
             if (req.method !== 'GET' && req.method !== 'HEAD' && excludeUrls.indexOf(req.originalUrl) === -1) {
                 return bb.any([
                     validate(options, req),
                     validateOldToken(options, req)
                 ]).then(function () {
-                    next();
-                }).catch(function (err) {
-                    // lol
-                    if (err instanceof Array) {
+                    next(null, true);
+                }, function (err) {
+                    // Bluebird throws an AggregateError for bb.any
+                    if (err instanceof AggregateError) {
                         err = err[0];
                     }
 
-                    res.status(401);
+                    if (err.message.indexOf('EINVALIDCSRF') === 0) {
+                        res.status(401);
+                    }
 
-                    err.code = err.code || 'DECRYPT_FAILED';
-                    err.message = err.message || 'decrypt token failed';
-
-                    var invalidErr = new Error('Invalid CSRF token: ' + err.message);
-                    invalidErr.code = 'EINVALIDCSRF_' + err.code;
-                    invalidErr.details = err.message;
-
-                    return next(invalidErr);
+                    return next(err);
                 });
             }
 

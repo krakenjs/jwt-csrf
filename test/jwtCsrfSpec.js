@@ -128,7 +128,7 @@ describe('token backwards compatibility', function () {
 
             jwtCsrf.validateOldToken(options, req)
                 .catch(function (err) {
-                    assert.equal(err.code, 'DIFF_PAYERID');
+                    assert.equal(err.message, 'EINVALIDCSRF_OLDTOKEN_DIFF_PAYERID');
                     done();
                 });
         });
@@ -153,7 +153,7 @@ describe('token backwards compatibility', function () {
 
             jwtCsrf.validateOldToken(options, req)
                 .catch(function (err) {
-                    assert.equal(err.code, 'NOT_LOGGED_IN_TOKEN');
+                    assert.equal(err.message, 'EINVALIDCSRF_OLDTOKEN_NOT_LOGGED_IN_TOKEN');
                     done();
                 });
         });
@@ -178,7 +178,7 @@ describe('token backwards compatibility', function () {
 
             jwtCsrf.validateOldToken(options, req)
                 .catch(function (err) {
-                    assert.equal(err.code, 'DIFF_PAYERID');
+                    assert.equal(err.message, 'EINVALIDCSRF_OLDTOKEN_DIFF_PAYERID');
                     done();
                 });
         });
@@ -203,7 +203,7 @@ describe('token backwards compatibility', function () {
 
             jwtCsrf.validateOldToken(options, req)
                 .catch(function (err) {
-                    assert.equal(err.code, 'TOKEN_EXPIRED');
+                    assert.equal(err.message, 'EINVALIDCSRF_TOKEN_EXPIRED');
                     done();
                 });
         });
@@ -225,7 +225,7 @@ describe('token backwards compatibility', function () {
 
             jwtCsrf.validateOldToken(options, req)
                 .catch(function (err) {
-                    assert.equal(err.code, 'DECRYPT_EXCEPTION');
+                    assert.equal(err.message, 'DECRYPT_EXCEPTION');
                     done();
                 });
         });
@@ -246,7 +246,7 @@ describe('token backwards compatibility', function () {
 
             jwtCsrf.validateOldToken(options, req)
                 .catch(function (err) {
-                    assert.equal(err.code, 'DECRYPT_EXCEPTION');
+                    assert.equal(err.message, 'DECRYPT_EXCEPTION');
                     done();
                 });
         });
@@ -410,34 +410,6 @@ describe('middleware', function () {
             });
         });
 
-        it('Should throw a 401 if there is only a header token', function (done) {
-
-            var tokens = jwtCsrf.createTokens(options, {
-                locals: {}
-            });
-
-            var req = {
-                headers: {
-                    'x-csrf-jwt': tokens.header,
-                    'user-agent': userAgent
-                }
-            };
-
-            var res = {
-                status: function (statusCode) {
-                    assert.equal(statusCode, 401, 'Ensure a 401 status code was set');
-                }
-            };
-
-            var middleware = jwtCsrf.middleware(options);
-
-            middleware(req, res, function(err, result){
-                assert(err, 'Expect an error to be thrown');
-                assert(!result, 'Expect an error to be thrown');
-                done();
-            });
-        });
-
         it('Should throw a 401 if there is only a cookie token', function (done) {
 
             var tokens = jwtCsrf.createTokens(options, {
@@ -450,130 +422,6 @@ describe('middleware', function () {
                 },
                 cookies: {
                     'csrf-jwt': tokens.cookie
-                }
-            };
-
-            var res = {
-                status: function (statusCode) {
-                    assert.equal(statusCode, 401, 'Ensure a 401 status code was set');
-                }
-            };
-
-            var middleware = jwtCsrf.middleware(options);
-
-            middleware(req, res, function(err, result){
-                assert(err, 'Expect an error to be thrown');
-                assert(!result, 'Expect an error to be thrown');
-                done();
-            });
-        });
-
-        it('Should throw a 401 if the header could not be decrypted', function (done) {
-
-            var tokens = jwtCsrf.createTokens(options, {
-                locals: {}
-            });
-
-            var req = {
-                headers: {
-                    'x-csrf-jwt': 'sometoken',
-                    'user-agent': userAgent
-                },
-                cookies: {
-                    'csrf-jwt': tokens.cookie
-                }
-            };
-
-            var res = {
-                status: function (statusCode) {
-                    assert.equal(statusCode, 401, 'Ensure a 401 status code was set');
-                }
-            };
-
-            var middleware = jwtCsrf.middleware(options);
-
-            middleware(req, res, function(err, result){
-                assert(err, 'Expect an error to be thrown');
-                assert(!result, 'Expect an error to be thrown');
-                done();
-            });
-        });
-
-        it('Should throw a 401 if the cookie could not be decrypted', function (done) {
-
-            var tokens = jwtCsrf.createTokens(options, {
-                locals: {}
-            });
-
-            var req = {
-                headers: {
-                    'x-csrf-jwt': tokens.header,
-                    'user-agent': userAgent
-                },
-                cookies: {
-                    'csrf-jwt': 'sometoken'
-                }
-            };
-
-            var res = {
-                status: function (statusCode) {
-                    assert.equal(statusCode, 401, 'Ensure a 401 status code was set');
-                }
-            };
-
-            var middleware = jwtCsrf.middleware(options);
-
-            middleware(req, res, function(err, result){
-                assert(err, 'Expect an error to be thrown');
-                assert(!result, 'Expect an error to be thrown');
-                done();
-            });
-        });
-
-        it('Should throw a 401 if the header token has a type of cookie', function (done) {
-
-            var tokens = jwtCsrf.createTokens(options, {
-                locals: {}
-            });
-
-            var req = {
-                headers: {
-                    'x-csrf-jwt': tokens.cookie,
-                    'user-agent': userAgent
-                },
-                cookies: {
-                    'csrf-jwt': tokens.cookie
-                }
-            };
-
-            var res = {
-                status: function (statusCode) {
-                    assert.equal(statusCode, 401, 'Ensure a 401 status code was set');
-                }
-            };
-
-            var middleware = jwtCsrf.middleware(options);
-
-            middleware(req, res, function(err, result){
-                assert(err, 'Expect an error to be thrown');
-                assert(!result, 'Expect an error to be thrown');
-                done();
-            });
-        });
-
-        it('Should throw a 401 if the cookie token has a type of header', function (done) {
-
-            var tokens = jwtCsrf.createTokens(options, {
-                locals: {}
-            });
-
-            var req = {
-                headers: {
-                    'x-csrf-jwt': tokens.header,
-                    'user-agent': userAgent
-                },
-                cookies: {
-                    'csrf-jwt': tokens.header
                 }
             };
 
@@ -726,7 +574,7 @@ describe('validate', function () {
             return jwtCsrf.validate(options, req)
                 .catch(function (err) {
                     assert(err, 'Expect verification to fail');
-                    assert.equal(err.code, 'MISSING_TOKENS', 'Error code is MISSING_HEADER');
+                    assert.equal(err.message, 'EINVALIDCSRF_NEWTOKEN_MISSING_TOKENS');
                     done();
                 });
         });
@@ -744,29 +592,10 @@ describe('validate', function () {
             return jwtCsrf.validate(options, req)
                 .catch(function (err) {
                     assert(err, 'Expect verification to fail');
-                    assert.equal(err.code, 'MISSING_HEADER', 'Error code is INVALID_TOKEN');
+                    assert.equal(err.message, 'EINVALIDCSRF_NEWTOKEN_MISSING_HEADER', 'Error code is INVALID_TOKEN');
                     done();
                 });
         });
-
-        // --- OLD CODE START ---
-        // it('Should fail if a cookie token is not provided', function (done) {
-        //     var req = {
-        //         headers: {
-        //             'x-csrf-jwt': tokens.header,
-        //             'user-agent': userAgent
-        //         },
-        //         cookies: {}
-        //     };
-
-        //     return jwtCsrf.validate(options, req)
-        //         .catch(function (err) {
-        //             assert(err, 'Expect verification to fail');
-        //             assert.equal(err.code, 'MISSING_COOKIE', 'Error code is INVALID_TOKEN');
-        //             done();
-        //         });
-        // });
-        // --- OLD CODE END ---
 
         it('Should fail for expired token', function (done) {
 
@@ -802,8 +631,7 @@ describe('validate', function () {
 
             return jwtCsrf.validate(options, req)
                 .catch(function (err) {
-                    assert.equal(err.code, 'TOKEN_EXPIRED', 'Error code is TOKEN_EXPIRED');
-                    assert.ok(err.message.indexOf('token expired at') > -1, 'Error contains time token expired');
+                    assert.equal(err.message, 'EINVALIDCSRF_TOKEN_EXPIRED', 'Error code is TOKEN_EXPIRED');
                     done();
                 });
         });
