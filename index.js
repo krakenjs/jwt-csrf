@@ -6,6 +6,7 @@ var uuid = require('node-uuid');
 var bb = require('bluebird');
 var encrypt = require('./lib').encrypt;
 var decrypt = require('./lib').decrypt;
+var util = require('util');
 
 var jwtVerify = bb.promisify(function() {
     jsonwebtoken.verify.apply(jsonwebtoken, arguments);
@@ -15,15 +16,12 @@ var AggregateError = bb.AggregateError;
 
 var DEFAULT_EXPIRATION_IN_MINUTES = 20;
 
-/**
- * For normalizing errors by adding a code and message
- *
- * @param {String} code - An error code (Ex: "TOKEN_EXPIRED")
- * @returns {Error} - Returns a normalized error
- */
-function createError(code) {
-    return new Error('EINVALIDCSRF_' + code);
+
+function CSRFError(message) {
+    this.message = 'EINVALIDCSRF_' + message;
 }
+
+util.inherits(CSRFError, Error);
 
 /**
  * Resolves a cookie's domain based on environment variables, localhost, etc.
@@ -99,12 +97,10 @@ function createTokens(options, res) {
 function verifyJWT(token, options) {
 
     return jwtVerify(token, options.secret).catch(function(err) {
-
-        console.log(err.stack);
-
+        
         // Normalize the error message from the jwt module
         var message = err.message ? err.message.substring(0, 25).replace(/ /, '_').toUpperCase() : 'VERIFY_FAILED';
-        throw createError(message);
+        throw new CSRFError(message);
 
     }).then(function(payload) {
 
@@ -152,9 +148,9 @@ function validateOldToken(options, req) {
             var userPayerId = req.user.encryptedAccountNumber;
 
             if (inputPayerId === 'not_logged_in') {
-                throw createError('OLDTOKEN_NOT_LOGGED_IN_TOKEN');
+                throw new CSRFError('OLDTOKEN_NOT_LOGGED_IN_TOKEN');
             } else if (inputPayerId !== userPayerId) {
-                throw createError('OLDTOKEN_DIFF_PAYERID');
+                throw new CSRFError('OLDTOKEN_DIFF_PAYERID');
             }
         }
 
@@ -185,15 +181,15 @@ function validate(options, req) {
 
         // Being extra granular with our errors here (sorry)
         if (!header && !cookie) {
-            throw createError('NEWTOKEN_MISSING_TOKENS');
+            throw new CSRFError('NEWTOKEN_MISSING_TOKENS');
         }
 
         if (!header) {
-            throw createError('NEWTOKEN_MISSING_HEADER');
+            throw new CSRFError('NEWTOKEN_MISSING_HEADER');
         }
 
         if (!cookie) {
-            throw createError('NEWTOKEN_MISSING_COOKIE');
+            throw new CSRFError('NEWTOKEN_MISSING_COOKIE');
         }
 
         return bb.all([
@@ -203,17 +199,17 @@ function validate(options, req) {
 
             // Fail fast if the header and cookie tokens could not be decrypted
             if (!headerToken || !cookieToken) {
-                throw createError('NEWTOKEN_DECRYPT_FAILED');
+                throw new CSRFError('NEWTOKEN_DECRYPT_FAILED');
             }
 
             // Check that the tokens are equivalent
             if (headerToken.id !== cookieToken.id) {
-                throw createError('NEWTOKEN_TOKEN_MISMATCH');
+                throw new CSRFError('NEWTOKEN_TOKEN_MISMATCH');
             }
 
             // Check that the token types are correct
             if (!isValidTokenType(headerToken, 'header') || !isValidTokenType(cookieToken, 'cookie')) {
-                throw createError('NEWTOKEN_INCORRECT_TOKEN_TYPE');
+                throw new CSRFError('NEWTOKEN_INCORRECT_TOKEN_TYPE');
             }
 
             return true;
@@ -271,7 +267,7 @@ module.exports = {
                         err = err[0];
                     }
 
-                    if (err.message.indexOf('EINVALIDCSRF') === 0) {
+                    if (err instanceof CSRFError) {
                         res.status(401);
                     }
 
