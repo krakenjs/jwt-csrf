@@ -203,7 +203,7 @@ describe('token backwards compatibility', function () {
 
             jwtCsrf.validateOldToken(options, req)
                 .catch(function (err) {
-                    assert.equal(err.message, 'EINVALIDCSRF_TOKEN_EXPIRED');
+                    assert.equal(err.message, 'EINVALIDCSRF_JWT_EXPIRED');
                     done();
                 });
         });
@@ -225,7 +225,7 @@ describe('token backwards compatibility', function () {
 
             jwtCsrf.validateOldToken(options, req)
                 .catch(function (err) {
-                    assert.equal(err.message, 'EINVALIDCSRF_DECRYPT_EXCEPTION');
+                    assert.equal(err.message, 'Unexpected end of input');
                     done();
                 });
         });
@@ -246,7 +246,7 @@ describe('token backwards compatibility', function () {
 
             jwtCsrf.validateOldToken(options, req)
                 .catch(function (err) {
-                    assert.equal(err.message, 'EINVALIDCSRF_DECRYPT_EXCEPTION');
+                    assert.equal(err.message, 'Unexpected token s');
                     done();
                 });
         });
@@ -631,7 +631,7 @@ describe('validate', function () {
 
             return jwtCsrf.validate(options, req)
                 .catch(function (err) {
-                    assert.equal(err.message, 'EINVALIDCSRF_TOKEN_EXPIRED', 'Error code is TOKEN_EXPIRED');
+                    assert.equal(err.message, 'EINVALIDCSRF_JWT_EXPIRED', 'Error code is TOKEN_EXPIRED');
                     done();
                 });
         });

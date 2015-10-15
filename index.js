@@ -7,15 +7,13 @@ var bb = require('bluebird');
 var encrypt = require('./lib').encrypt;
 var decrypt = require('./lib').decrypt;
 
+var jwtVerify = bb.promisify(function() {
+    jsonwebtoken.verify.apply(jsonwebtoken, arguments);
+});
+
 var AggregateError = bb.AggregateError;
 
 var DEFAULT_EXPIRATION_IN_MINUTES = 20;
-
-// --- OLD CODE START ---
-function toString(x) {
-    return x === undefined ? 'undefined' : ( typeof x === 'string' ? x : JSON.stringify(x) );
-}
-// --- OLD CODE END ---
 
 /**
  * For normalizing errors by adding a code and message
@@ -65,6 +63,11 @@ function create(options, payload) {
     return jsonwebtoken.sign(encryptedPayload, options.secret, jwtOptions);
 }
 
+
+
+
+
+
 /**
  * Creates a cookie and header token using the same uuid, but different types
  *
@@ -94,34 +97,19 @@ function createTokens(options, res) {
  * @returns {Promise} - Returns a promise
  */
 function verifyJWT(token, options) {
-    return new bb.Promise(function (resolve, reject) {
-        jsonwebtoken.verify(token, options.secret, function (err, payload) {
-            var data;
 
-            if (err) {
+    return jwtVerify(token, options.secret).catch(function(err) {
 
-                // Normalizing error code... Turning "jwt expired" into JWT_EXPIRED
-                err.message = err.message ? err.message.substring(0, 25).replace(/ /, '_').toUpperCase() : 'VERIFY_FAILED';
+        console.log(err.stack);
 
-                // Re-writing JWT_EXPIRED error to TOKEN_EXPIRED (normalizing a bit)
-                if (err.message === 'JWT_EXPIRED') {
-                    err.message = 'TOKEN_EXPIRED';
-                }
+        // Normalize the error message from the jwt module
+        var message = err.message ? err.message.substring(0, 25).replace(/ /, '_').toUpperCase() : 'VERIFY_FAILED';
+        throw createError(message);
 
-                return reject(createError(err.message));
-            }
+    }).then(function(payload) {
 
-            // Attempting to decrypt payload (JSON.parse throws errors willy nilly :|)
-            try {
-                var decryptedPayload = decrypt(options.secret, options.macKey, payload.token);
-                data = JSON.parse(decryptedPayload);
-            } catch (err) {
-                err.message = 'DECRYPT_EXCEPTION';
-                return reject(createError(err.message));
-            }
-
-            return resolve(data);
-        });
+        // Attempt to decrypt the token
+        return JSON.parse(decrypt(options.secret, options.macKey, payload.token));
     });
 }
 
@@ -161,7 +149,7 @@ function validateOldToken(options, req) {
 
             // Check payerId in token
             var inputPayerId = headerToken.uid;
-            var userPayerId = toString(req.user.encryptedAccountNumber);
+            var userPayerId = req.user.encryptedAccountNumber;
 
             if (inputPayerId === 'not_logged_in') {
                 throw createError('OLDTOKEN_NOT_LOGGED_IN_TOKEN');
