@@ -3,36 +3,39 @@
 var jsonwebtoken = require('jsonwebtoken');
 var onHeaders = require('on-headers');
 var uuid = require('node-uuid');
-var bb = require('bluebird');
 var encrypt = require('./lib').encrypt;
 var decrypt = require('./lib').decrypt;
+var util = require('util');
+var _ = require('underscore');
 
-var AggregateError = bb.AggregateError;
+var DEFAULT_EXPIRATION_IN_MINUTES = 60;
+var DEFAULT_HEADER_NAME = 'x-csrf-jwt';
+var DEFAULT_CSRF_DRIVER = 'AUTHED_TOKEN';
 
-var DEFAULT_EXPIRATION_IN_MINUTES = 20;
 
-// --- OLD CODE START ---
-function toString(x) {
-    return x === undefined ? 'undefined' : ( typeof x === 'string' ? x : JSON.stringify(x) );
-}
-// --- OLD CODE END ---
+/*
+    CSRF Error
+    ----------
 
-/**
- * For normalizing errors by adding a code and message
- *
- * @param {String} code - An error code (Ex: "TOKEN_EXPIRED")
- * @returns {Error} - Returns a normalized error
+    A custom CSRF Error specifically for cases when we want to throw a 301 to the user's browser.
+    Everything else is considered an unhandled error.
  */
-function createError(code) {
-    return new Error('EINVALIDCSRF_' + code);
+
+function CSRFError(message) {
+    this.message = 'EINVALIDCSRF_' + message;
 }
 
-/**
- * Resolves a cookie's domain based on environment variables, localhost, etc.
- *
- * @param {Object} req - Express request object
- * @returns {String} - A resolved domain for a cookie (Ex: '.paypal.com')
+util.inherits(CSRFError, Error);
+
+
+
+/*
+    Resolve Domain
+    --------------
+
+    Determine the current domain
  */
+
 function resolveDomain(req) {
     var host, domain;
 
@@ -46,199 +49,363 @@ function resolveDomain(req) {
     return domain !== 'localhost' && domain !== '127.0.0.1' ? '.paypal.com' : domain;
 }
 
-/**
- * Creates a token using a provided payload, secret, and macKey
- *
- * @param {Object} options - Must contain "secret", "macKey"
- * @param {Object} payload - Must contain something. Ideally, a cryptographically-strong key.
- * @returns {String} - A sealed token (JWT)
+
+/*
+    JWT
+    ---
+
+    An abstraction on top of JWT which also handles serialization/deserialization and encryption/decryption
+
+    The final token looks something like:
+
+    [JWT-SIGNED [ENCRYPTED [JSON SERIALIZED [JS OBJECT]]]]
+
+    These methods just handle creating and unpacking this object.
+
+    * pack: serialize, encrypt and sign a javascript object token
+
+    * unpack: verify, decrypt and deserialize an jwt token
  */
-function create(options, payload) {
-    var encryptedPayload = {
-        token: encrypt(options.secret, options.macKey, JSON.stringify(payload))
-    };
 
-    var jwtOptions = {
-        expiresInMinutes: options.expiresInMinutes ? options.expiresInMinutes : DEFAULT_EXPIRATION_IN_MINUTES
-    };
+var JWT = {
 
-    return jsonwebtoken.sign(encryptedPayload, options.secret, jwtOptions);
-}
+    pack: function(token, options) {
 
-/**
- * Creates a cookie and header token using the same uuid, but different types
- *
- * @param {Object} options - Must contain "secret" and "macKey"
- * @param {Object} res - Express response object
- * @returns {Object} - Has signed cookie and header tokens
- */
-function createTokens(options, res) {
-    var tokens = {};
-    var id = res.locals.jwtuuid = res.locals.jwtuuid || uuid.v4();
+        // Attempt to serialize and encrypt the token
+        var encryptedToken = {
+            token: encrypt(options.secret, options.macKey, JSON.stringify(token))
+        };
 
-    ['cookie', 'header'].forEach(function (type) {
-        tokens[type] = create(options, {
-            id: id,
-            type: type
+        // Then sign it using jsonwebtoken
+        return jsonwebtoken.sign(encryptedToken, options.secret, {
+            expiresInMinutes: options.expiresInMinutes || DEFAULT_EXPIRATION_IN_MINUTES
         });
-    });
+    },
 
-    return tokens;
-}
+    unpack: function(token, options) {
 
-/**
- * Checks that a JWT is valid, not expired, and is able to be decrypted.
- *
- * @param {String} token - A sealed token (JWT)
- * @param {Object} options - Must contain "secret" and "macKey"
- * @returns {Promise} - Returns a promise
+        var encryptedPayload;
+
+        try {
+
+            // Verify the json token
+            encryptedPayload = jsonwebtoken.verify(token, options.secret);
+        }
+        catch (err) {
+
+            // If there's no message, it's probably some weird unhandled error
+            if (!err.message) {
+                throw err;
+            }
+
+            // Normalize 'some error message' to 'SOME_ERROR_MESSAGE'
+            throw new CSRFError(err.message.substring(0, 25).replace(/ /, '_').toUpperCase());
+        }
+
+        // Attempt to decrypt and deserialize the token
+        return JSON.parse(decrypt(options.secret, options.macKey, encryptedPayload.token));
+    }
+};
+
+
+
+/*
+    PERSISTENCE DRIVERS
+    -------------------
+
+    Drivers for writing and reading to 'persistence' layers, e.g. headers or cookies
+
+    * drop: a user defined method which drops the encrypted jwt token to the persistence layer of choice
+
+    * retrieve: a user defined method which reads the encrypted jwt token from the persistence layer of choice
  */
-function verifyJWT(token, options) {
-    return new bb.Promise(function (resolve, reject) {
-        jsonwebtoken.verify(token, options.secret, function (err, payload) {
-            var data;
 
-            if (err) {
+var PERSISTENCE_DRIVERS = {
 
-                // Normalizing error code... Turning "jwt expired" into JWT_EXPIRED
-                err.message = err.message ? err.message.substring(0, 25).replace(/ /, '_').toUpperCase() : 'VERIFY_FAILED';
+    header: {
+        drop: function(req, res, options, jwtToken) {
+            res.setHeader(options.headerName || DEFAULT_HEADER_NAME, jwtToken);
+        },
 
-                // Re-writing JWT_EXPIRED error to TOKEN_EXPIRED (normalizing a bit)
-                if (err.message === 'JWT_EXPIRED') {
-                    err.message = 'TOKEN_EXPIRED';
+        retrieve: function(req, res, options) {
+            return req.headers[options.headerName || DEFAULT_HEADER_NAME];
+        }
+    },
+
+    cookie: {
+        drop: function(req, res, options, jwtToken) {
+
+            var secure = Boolean(process.env.DEPLOY_ENV || req.protocol === 'https');
+            var expires = Date.now() + ((options.expiresInMinutes || DEFAULT_EXPIRATION_IN_MINUTES) * 60 * 1000);
+
+            res.encryptedCookie(options.headerName || DEFAULT_HEADER_NAME, jwtToken, {
+                secure: secure,
+                httpOnly: true,
+                domain: resolveDomain(req),
+                expires: new Date(expires),
+                encryptName: true,
+                encryptValue: false
+            });
+        },
+
+        retrieve: function(req, res, options) {
+            return req.cookies[options.headerName || DEFAULT_HEADER_NAME];
+        }
+    }
+};
+
+
+/*
+    CSRF DRIVERS
+    ------------
+
+    Drivers for generating and verifying jwt tokens.
+
+    The process of retrieving, decrypting and dropping the tokens is abstracted, so
+    we can just deal with simple javascript objects.
+
+    * persist: a mapping of persistence layers we want to enable for the given csrf mode
+
+    * generate: a user defined method which generates and returns the token (a javascript object)
+                with everything needed to verify later
+
+    * verify: a user defined method which recieves the token(s) on inbound requests, and throws a CSRFError if there
+              is a verification problem. This later manifests as a 401 response to the browser.
+ */
+
+var CSRF_DRIVERS = {
+
+    AUTHED_TOKEN: {
+
+        persist: {
+            cookie: false,
+            header: true
+        },
+
+        generate: function(req, res, options) {
+
+            return {
+                uid: req.user && req.user.encryptedAccountNumber
+            };
+        },
+
+        verify: function(req, res, options, tokens) {
+
+            if (req.user && req.user.encryptedAccountNumber) {
+
+                if (!tokens.header.uid) {
+                    throw new CSRFError('TOKEN_PAYERID_MISSING');
                 }
 
-                return reject(createError(err.message));
+                if (tokens.header.uid !== req.user.encryptedAccountNumber) {
+                    throw new CSRFError('TOKEN_PAYERID_MISMATCH');
+                }
             }
+        }
+    },
 
-            // Attempting to decrypt payload (JSON.parse throws errors willy nilly :|)
-            try {
-                var decryptedPayload = decrypt(options.secret, options.macKey, payload.token);
-                data = JSON.parse(decryptedPayload);
-            } catch (err) {
-                err.message = 'DECRYPT_EXCEPTION';
-                return reject(createError(err.message));
+    DOUBLE_SUBMIT: {
+
+        persist: {
+            cookie: true,
+            header: true
+        },
+
+        generate: function(req, res, options) {
+
+            return {
+                id: uuid.v4()
             }
+        },
 
-            return resolve(data);
-        });
+        verify: function(req, res, options, tokens) {
+
+            if (tokens.header.id !== tokens.cookie.id) {
+                throw new CSRFError('HEADER_COOKIE_TOKEN_MISMATCH');
+            }
+        }
+    }
+};
+
+
+/*
+    Generate
+    --------
+
+    Generate an object containing packed jwt tokens for each persistence layer:
+
+    {
+        header: 'xxxxxxxxx',
+        cookie: 'yyyyyyyyy'
+    }
+ */
+
+
+function generate(req, res, options) {
+
+    // Determine which driver to use to generate the token
+    var csrfDriver = options.csrfDriver || DEFAULT_CSRF_DRIVER;
+    var driver = CSRF_DRIVERS[csrfDriver];
+
+    // Generate the token from our chosen driver
+    var token = driver.generate(req, res);
+
+    // Build a collection of jwt tokens
+    var jwtTokens = {};
+
+    // Loop through each persistance type for the current csrfDriver
+    Object.keys(driver.persist).forEach(function(persistenceDriver) {
+
+        // Check if this persistence type is enabled for the current csrfDriver
+        if (driver.persist[persistenceDriver]) {
+
+            // Add the csrfDriver and persistenceDriver into the token so we can verify them on inbound requests
+            var payload = _.extend({
+                csrfDriver: csrfDriver,
+                persistenceDriver: persistenceDriver
+            }, token);
+
+            // Pack and save our token
+            jwtTokens[persistenceDriver] = JWT.pack(payload, options);
+        }
+    });
+
+    return jwtTokens;
+}
+
+
+/*
+    Drop
+    ----
+
+    Generate new jwt tokens and drop them to the persistence layers (response headers/cookies).
+
+    The persistence layers used will be those valid for the passed csrfType.
+ */
+
+function drop(req, res, options) {
+
+    // Generate the jwt tokens we need to drop
+    var jwtTokens = generate(req, res, options);
+
+    // Add them to res.locals for other middlewares to consume
+    res.locals.csrfJwtTokens = jwtTokens;
+
+    // Loop through each persistence type for the current csrf driver
+    Object.keys(jwtTokens).forEach(function(persistenceDriver) {
+
+        // Get the individual token
+        var jwtToken = jwtTokens[persistenceDriver];
+
+        // Drop the token to the persistence layer
+        PERSISTENCE_DRIVERS[persistenceDriver].drop(req, res, options, jwtToken);
     });
 }
 
-/**
- * Checks that a token exists and has the correct type
- *
- * @param {String} token - A sealed token (JWT)
- * @param {String} type - A token type (Ex: "header", "cookie")
- * @returns {Boolean} - Returns true if valid, false if invalid
+
+/*
+    Read
+    ----
+
+    Read and unpack a token, given a persistence driver name.
+
+    e.g. giving 'header' would read the encrypted cookie from req.headers, then decrypt/unpack it.
+
+    Returns an unpacked token, e.g.
+
+    {
+        uid: XXXX
+    }
  */
-function isValidTokenType(token, type) {
-    return token && token.type === type;
+
+function read(req, res, options, persistenceDriver) {
+
+    var jwtToken = PERSISTENCE_DRIVERS[persistenceDriver].retrieve(req, res, options);
+
+    // Make sure we got a token
+    if (!jwtToken) {
+        throw new CSRFError('TOKEN_NOT_IN_' + persistenceDriver.toUpperCase());
+    }
+
+    var token = JWT.unpack(jwtToken, options);
+
+    // Default the persistenceDriver to 'header' (for legacy tokens -- can remove this later)
+    token.persistenceDriver = token.persistenceDriver || 'header';
+
+    // Validate that it has the correct persistenceDriver
+    if (token.persistenceDriver !== persistenceDriver) {
+        throw new CSRFError('GOT_' + token.persistenceDriver.toUpperCase() + '_EXPECTED_' + persistenceDriver.toUpperCase());
+    }
+
+    return token;
 }
 
-/**
- * Checks if an old JWT token is valid using these checks:
- * 1. If the header token exists
- * 2. If the token is a valid JWT
- * 3. If the token has not expired
- * 4. If the user is logged in and does not have a "not_logged_in" token.
- * 5. If the user is logged in and their encrypted account number matches the token
- *
- * If all of those checks pass, the JWT token is valid.
- *
- * @param {Object} options - Must contain "secret" and "macKey"
- * @param {Object} req - Express request object
- * @returns {Promise}
- */
-function validateOldToken(options, req) {
-    var token = req.headers && req.headers['x-csrf-jwt'];
-    var isLoggedIn = req && req.user;
 
-    return verifyJWT(token, options).then(function (headerToken) {
+/*
+    Retrieve
+    --------
 
-        // If this is a authenticated user, then verify the payerId in jwtToken with payerId in req.user.
-        if (isLoggedIn) {
+    Retrieve and unpack all tokens from the persistence layer for our driver.
 
-            // Check payerId in token
-            var inputPayerId = headerToken.uid;
-            var userPayerId = toString(req.user.encryptedAccountNumber);
+    Returns a mapping of unpacked tokens, e.g.
 
-            if (inputPayerId === 'not_logged_in') {
-                throw createError('OLDTOKEN_NOT_LOGGED_IN_TOKEN');
-            } else if (inputPayerId !== userPayerId) {
-                throw createError('OLDTOKEN_DIFF_PAYERID');
-            }
+    {
+        header: {
+            uid: XXX
+        },
+        cookie: {
+            uid: YYY
         }
+    }
+ */
 
-        return true;
+function retrieve(req, res, options, csrfDriver) {
+
+    var driver = CSRF_DRIVERS[csrfDriver];
+
+    // Build an object of tokens
+    var tokens = {};
+
+    // Loop over each persistence mechanism and build an object of decrypted tokens
+    Object.keys(driver.persist).forEach(function(persistenceDriver) {
+
+        // We only want tokens which are valid for the current csrf driver
+        if (driver.persist[persistenceDriver]) {
+            tokens[persistenceDriver] = read(req, res, options, persistenceDriver);
+        }
     });
+
+    return tokens
 }
 
-/**
- * Checks if a JWT is valid by using these checks:
- * 1. If the header and cookie tokens exist
- * 2. If the tokens are valid JWTs
- * 3. If the tokens have not expired
- * 4. If the decrypted tokens match
- * 5. If the tokens have the correct type (Ex: Header token with a type of "header")
- *
- * If all of those checks pass, the JWT tokens are valid.
- *
- * @param {Object} options - Must contain "secret" and "macKey"
- * @param {Object} req - Express request object
- * @returns {Promise}
+
+/*
+    Verify
+    ------
+
+    Verify all tokens from the relevant persistence layers.
+
+    Throw a CSRFError on any verification failures.
  */
-function validate(options, req) {
 
-    var header = req.headers && req.headers['x-csrf-jwt'];
-    var cookie = req.cookies && req.cookies['csrf-jwt'];
+function verify(req, res, options) {
 
-    return bb.try(function () {
+    // First we need to get the header first to figure out which csrfDriver we need to verify
+    var headerToken = read(req, res, options, 'header');
 
-        // Being extra granular with our errors here (sorry)
-        if (!header && !cookie) {
-            throw createError('NEWTOKEN_MISSING_TOKENS');
-        }
+    var csrfDriver = headerToken.csrfDriver || DEFAULT_CSRF_DRIVER;
 
-        if (!header) {
-            throw createError('NEWTOKEN_MISSING_HEADER');
-        }
+    // Now we know the mode, we can retrieve the tokens from all persistence types for this mode
+    var tokens = retrieve(req, res, options, csrfDriver);
 
-        if (!cookie) {
-            throw createError('NEWTOKEN_MISSING_COOKIE');
-        }
-
-        return bb.all([
-            verifyJWT(header, options),
-            verifyJWT(cookie, options)
-        ]).spread(function (headerToken, cookieToken) {
-
-            // Fail fast if the header and cookie tokens could not be decrypted
-            if (!headerToken || !cookieToken) {
-                throw createError('NEWTOKEN_DECRYPT_FAILED');
-            }
-
-            // Check that the tokens are equivalent
-            if (headerToken.id !== cookieToken.id) {
-                throw createError('NEWTOKEN_TOKEN_MISMATCH');
-            }
-
-            // Check that the token types are correct
-            if (!isValidTokenType(headerToken, 'header') || !isValidTokenType(cookieToken, 'cookie')) {
-                throw createError('NEWTOKEN_INCORRECT_TOKEN_TYPE');
-            }
-
-            return true;
-        });
-    });
+    // Now we have all of the tokens, pass to the driver to verify them
+    return CSRF_DRIVERS[csrfDriver].verify(req, res, options, tokens);
 }
+
 
 module.exports = {
 
-    create: create,
-    createTokens: createTokens,
-    validate: validate,
-    validateOldToken: validateOldToken,
+    CSRFError: CSRFError,
 
     middleware: function (options) {
 
@@ -253,46 +420,31 @@ module.exports = {
         return function (req, res, next) {
 
             // Set JWT in header and cookie before response goes out
+            // This is done in onHeaders since we need to wait for any service calls (e.g. auth) which may
+            // otherwise change the state of our token
             onHeaders(res, function () {
-                var tokens = createTokens(options, res);
-
-                // Set CSRF as a custom response header
-                res.setHeader('x-csrf-jwt', tokens.header);
-
-                // Set an encrypted cookie (the name "csrf-jwt" is encrypted, same with the value)
-                res.encryptedCookie('csrf-jwt', tokens.cookie, {
-                    secure: process.env.DEPLOY_ENV ? true : (req.protocol === 'https' ? true : false),
-                    httpOnly: true,
-                    domain: resolveDomain(req),
-                    expires: new Date(Date.now() + DEFAULT_EXPIRATION_IN_MINUTES * 60 * 1000),
-                    encryptName: true,
-                    encryptValue: false
-                });
+                drop(req, res, options);
             });
 
-            // Validate JWT on incoming request.
-            if (req.method !== 'GET' && req.method !== 'HEAD' && excludeUrls.indexOf(req.originalUrl) === -1) {
-                return bb.any([
-                    validate(options, req),
-                    validateOldToken(options, req)
-                ]).then(function () {
-                    next(null, true);
-                }, function (err) {
-                    // Bluebird throws an AggregateError for bb.any
-                    if (err instanceof AggregateError) {
-                        err = err[0];
-                    }
-
-                    if (err.message.indexOf('EINVALIDCSRF') === 0) {
-                        res.status(401);
-                    }
-
-                    return next(err);
-                });
+            // We only want to verify certain requests
+            if (req.method === 'GET' || req.method === 'HEAD' || excludeUrls.indexOf(req.originalUrl) !== -1) {
+                return next();
             }
 
-            next();
+            try {
+                verify(req, res, options);
+            }
+            catch (err) {
+
+                // If we get a CSRFError, we can send a 401 to trigger a retry, otherwise the error will be unhandled
+                if (err instanceof CSRFError) {
+                    res.status(401);
+                }
+
+                return next(err);
+            }
+
+            return next();
         };
     }
-
 };
