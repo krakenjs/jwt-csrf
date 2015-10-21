@@ -361,6 +361,7 @@ describe('middleware', function() {
 
             req.method = 'POST';
             req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
+            req.user = {encryptedAccountNumber: 'xyz'};
 
             runMiddleware(req, res, options, function(err) {
 
@@ -533,10 +534,11 @@ describe('middleware', function() {
                 req.method = 'POST';
                 req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
                 req.cookies[HEADER_NAME] = oldCookie;
+                req.user = {encryptedAccountNumber: 'xyz'};
 
                 runMiddleware(req, res, options, function(err) {
 
-                    assertError(err, 'EINVALIDCSRF_HEADER_COOKIE_TOKEN_MISMATCH');
+                    assertError(err, 'EINVALIDCSRF_HEADER_COOKIE_MISMATCH');
                     assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
                     assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
                 });
