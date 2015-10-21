@@ -234,7 +234,7 @@ var CSRF_DRIVERS = {
             }
 
             if (tokens.header.id !== tokens.cookie.id) {
-                throw new CSRFError('HEADER_COOKIE_TOKEN_MISMATCH');
+                throw new CSRFError('HEADER_COOKIE_ID_MISMATCH');
             }
         }
     },

@@ -365,7 +365,7 @@ describe('middleware', function() {
 
             runMiddleware(req, res, options, function(err) {
 
-                assertError(err, 'EINVALIDCSRF_TOKEN_NOT_IN_COOKIE');
+                assertError(err, 'EINVALIDCSRF_ID_NOT_IN_COOKIE');
                 assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
                 assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
             });
@@ -538,7 +538,7 @@ describe('middleware', function() {
 
                 runMiddleware(req, res, options, function(err) {
 
-                    assertError(err, 'EINVALIDCSRF_HEADER_COOKIE_MISMATCH');
+                    assertError(err, 'EINVALIDCSRF_HEADER_COOKIE_ID_MISMATCH');
                     assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
                     assert(res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
                 });
