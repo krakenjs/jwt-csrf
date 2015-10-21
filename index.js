@@ -138,7 +138,7 @@ var PERSISTENCE_DRIVERS = {
             var secure = Boolean(process.env.DEPLOY_ENV || req.protocol === 'https');
             var expires = Date.now() + (1000 * 60 * 60 * 24 * 7); // 1 week
 
-            res.encryptedCookie(options.headerName || DEFAULT_HEADER_NAME, jwtToken, {
+            res.cookie(options.headerName || DEFAULT_HEADER_NAME, jwtToken, {
                 secure: secure,
                 httpOnly: true,
                 domain: resolveDomain(req),
@@ -191,6 +191,11 @@ var CSRF_DRIVERS = {
 
         verify: function(req, res, options, tokens) {
 
+            // tokens.header will always be an object
+            if (Object.keys(tokens.header).length === 0) {
+                throw new CSRFError('TOKEN_NOT_IN_HEADER');
+            }
+
             if (req.user && req.user.encryptedAccountNumber) {
 
                 if (!tokens.header.uid) {
@@ -214,15 +219,49 @@ var CSRF_DRIVERS = {
         generate: function(req, res, options) {
 
             return {
+                uid: req.user && req.user.encryptedAccountNumber,
                 id: uuid.v4()
             }
         },
 
         verify: function(req, res, options, tokens) {
 
-            if (tokens.header.id !== tokens.cookie.id) {
+            var headerPayerId = tokens.header.uid;
+            var payerId = req.user && req.user.encryptedAccountNumber;
+            var headerPayerIdMatch = payerId && (payerId === headerPayerId);
+
+            var cookieId = tokens.cookie.id;
+            var headerId = tokens.header.id;
+            var tokenIdMatch = headerId === cookieId;
+
+            // If the cookie has a valid payerId, or the header & cookie tokens match, proceed.
+            if (headerPayerIdMatch || tokenIdMatch) {
+                return;
+            }
+
+            if (!cookieId) {
+                throw new CSRFError('TOKEN_NOT_IN_COOKIE');
+            }
+
+            if (!headerId) {
+                throw new CSRFError('TOKEN_NOT_IN_HEADER');
+            }
+
+            if (!tokenIdMatch) {
                 throw new CSRFError('HEADER_COOKIE_TOKEN_MISMATCH');
             }
+
+            // Fallback payerId checks
+            if (!headerPayerId) {
+                throw new CSRFError('TOKEN_COOKIE_PAYERID_MISSING');
+            }
+
+            if (!headerPayerIdMatch) {
+                throw new CSRFError('TOKEN_PAYERID_MISMATCH');
+            }
+
+            // We should never reach this, but in case we do, throw a generic error.
+            throw new CSRFError('TOKEN_INVALID');
         }
     }
 };
@@ -322,9 +361,8 @@ function read(req, res, options, persistenceDriver) {
 
     var jwtToken = PERSISTENCE_DRIVERS[persistenceDriver].retrieve(req, res, options);
 
-    // Make sure we got a token
     if (!jwtToken) {
-        throw new CSRFError('TOKEN_NOT_IN_' + persistenceDriver.toUpperCase());
+        return {};
     }
 
     var token = JWT.unpack(jwtToken, options);

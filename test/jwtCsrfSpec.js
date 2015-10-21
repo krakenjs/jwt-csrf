@@ -55,7 +55,7 @@ function getRes(obj) {
             assert(value, 'header value exists');
             this.headers[key] = value;
         },
-        encryptedCookie: function (key, value, options) {
+        cookie: function (key, value, options) {
             assert.equal(key, HEADER_NAME, 'cookie has been set');
             assert(value, 'cookie value exists');
             assert(options, 'cookie options exists');
