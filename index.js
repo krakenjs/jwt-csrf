@@ -219,6 +219,36 @@ var CSRF_DRIVERS = {
         generate: function(req, res, options) {
 
             return {
+                id: uuid.v4()
+            }
+        },
+
+        verify: function(req, res, options, tokens) {
+
+            if (!tokens.header.id) {
+                throw new CSRFError('ID_NOT_IN_HEADER');
+            }
+
+            if (!tokens.cookie.id) {
+                throw new CSRFError('ID_NOT_IN_COOKIE');
+            }
+
+            if (tokens.header.id !== tokens.cookie.id) {
+                throw new CSRFError('HEADER_COOKIE_TOKEN_MISMATCH');
+            }
+        }
+    },
+
+    AUTHED_DOUBLE_SUBMIT: {
+
+        persist: {
+            cookie: true,
+            header: true
+        },
+
+        generate: function(req, res, options) {
+
+            return {
                 uid: req.user && req.user.encryptedAccountNumber,
                 id: uuid.v4()
             }
