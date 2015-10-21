@@ -470,7 +470,7 @@ function verify(req, res, options) {
     // First we need to get the header first to figure out which csrfDriver we need to verify
     var headerToken = read(req, res, options, 'header');
 
-    var csrfDriver = headerToken.csrfDriver || DEFAULT_CSRF_DRIVER;
+    var csrfDriver = (headerToken.csrfDriver && CSRF_DRIVERS[headerToken.csrfDriver]) ? headerToken.csrfDriver : DEFAULT_CSRF_DRIVER;
 
     // Now we know the mode, we can retrieve the tokens from all persistence types for this mode
     var tokens = retrieve(req, res, options, csrfDriver);
