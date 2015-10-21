@@ -262,39 +262,39 @@ var CSRF_DRIVERS = {
 
             try {
 
-                // First do the payerid check
+                // First do the cookie check
 
-                if (req.user && req.user.encryptedAccountNumber) {
+                if (!Object.keys(tokens.cookie).length) {
+                    throw new CSRFError('TOKEN_NOT_IN_COOKIE');
+                }
 
-                    if (!tokens.header.uid) {
-                        throw new CSRFError('TOKEN_PAYERID_MISSING');
-                    }
+                if (!tokens.header.id) {
+                    throw new CSRFError('ID_NOT_IN_HEADER');
+                }
 
-                    if (tokens.header.uid !== req.user.encryptedAccountNumber) {
-                        throw new CSRFError('TOKEN_PAYERID_MISMATCH');
-                    }
+                if (!tokens.cookie.id) {
+                    throw new CSRFError('ID_NOT_IN_COOKIE');
+                }
+
+                if (tokens.header.id !== tokens.cookie.id) {
+                    throw new CSRFError('HEADER_COOKIE_MISMATCH');
                 }
 
             } catch(err) {
 
-                // Then if this fails, fall back to cookie check
+                // Then if this fails, fall back to payerid
 
                 if (err instanceof CSRFError) {
 
-                    if (!Object.keys(tokens.cookie).length) {
-                        throw new CSRFError('TOKEN_NOT_IN_COOKIE');
-                    }
+                    if (req.user && req.user.encryptedAccountNumber) {
 
-                    if (!tokens.header.id) {
-                        throw new CSRFError('ID_NOT_IN_HEADER');
-                    }
+                        if (!tokens.header.uid) {
+                            throw new CSRFError('TOKEN_PAYERID_MISSING');
+                        }
 
-                    if (!tokens.cookie.id) {
-                        throw new CSRFError('ID_NOT_IN_COOKIE');
-                    }
-
-                    if (tokens.header.id !== tokens.cookie.id) {
-                        throw new CSRFError('HEADER_COOKIE_MISMATCH');
+                        if (tokens.header.uid !== req.user.encryptedAccountNumber) {
+                            throw new CSRFError('TOKEN_PAYERID_MISMATCH');
+                        }
                     }
 
                 } else {
