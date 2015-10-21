@@ -136,7 +136,7 @@ var PERSISTENCE_DRIVERS = {
         drop: function(req, res, options, jwtToken) {
 
             var secure = Boolean(process.env.DEPLOY_ENV || req.protocol === 'https');
-            var expires = Date.now() + ((options.expiresInMinutes || DEFAULT_EXPIRATION_IN_MINUTES) * 60 * 1000);
+            var expires = Date.now() + (1000 * 60 * 60 * 24 * 7); // 1 week
 
             res.encryptedCookie(options.headerName || DEFAULT_HEADER_NAME, jwtToken, {
                 secure: secure,
