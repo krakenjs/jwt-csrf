@@ -7,6 +7,7 @@ var encrypt = require('./lib').encrypt;
 var decrypt = require('./lib').decrypt;
 var util = require('util');
 var _ = require('underscore');
+var crypto = require('crypto');
 
 var DEFAULT_EXPIRATION_IN_MINUTES = 60;
 var DEFAULT_HEADER_NAME = 'x-csrf-jwt';
@@ -27,7 +28,16 @@ function CSRFError(message) {
 
 util.inherits(CSRFError, Error);
 
+/*
+    Hash
+    ----
 
+    Hash a string using sha256
+ */
+
+function hash(text) {
+    return crypto.createHash('sha256').update(text).digest('hex');
+}
 
 /*
     Resolve Domain
@@ -124,11 +134,36 @@ var PERSISTENCE_DRIVERS = {
 
     header: {
         drop: function(req, res, options, jwtToken) {
-            res.setHeader(options.headerName || DEFAULT_HEADER_NAME, jwtToken);
+            var headerName = options.headerName || DEFAULT_HEADER_NAME;
+
+            res.setHeader(headerName, jwtToken);
+            res.setHeader(headerName + '-hash', hash(jwtToken));
         },
 
         retrieve: function(req, res, options) {
-            return req.headers[options.headerName || DEFAULT_HEADER_NAME];
+            var headerName = options.headerName || DEFAULT_HEADER_NAME;
+
+            var jwtToken = req.headers[headerName];
+
+            if (!jwtToken) {
+
+                jwtToken = req.body && req.body.meta && req.body.meta[headerName];
+                var jwtTokenHash = req.headers[headerName + '-hash'];
+
+                if (!jwtToken) {
+                    return;
+                }
+
+                if (!jwtTokenHash) {
+                    throw new CSRFError('TOKEN_HASH_HEADER_MISSING');
+                }
+
+                if (jwtTokenHash !== hash(jwtToken)) {
+                    throw new CSRFError('TOKEN_HASH_MISMATCH');
+                }
+            }
+
+            return jwtToken;
         }
     },
 

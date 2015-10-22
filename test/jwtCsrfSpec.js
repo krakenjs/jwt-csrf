@@ -51,7 +51,6 @@ function getRes(obj) {
 
         },
         setHeader: function (key, value) {
-            assert.equal(key, HEADER_NAME, 'header has been set');
             assert(value, 'header value exists');
             this.headers[key] = value;
         },
