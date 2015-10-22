@@ -23,7 +23,7 @@ var DEFAULT_CSRF_DRIVER = 'AUTHED_TOKEN';
  */
 
 function CSRFError(message) {
-    this.message = 'EINVALIDCSRF_' + message;
+    this.message = this.code = 'EINVALIDCSRF_' + message;
 }
 
 util.inherits(CSRFError, Error);
@@ -144,23 +144,21 @@ var PERSISTENCE_DRIVERS = {
             var headerName = options.headerName || DEFAULT_HEADER_NAME;
 
             var jwtToken = req.headers[headerName];
+            var jwtTokenBody = req.body && req.body.meta && req.body.meta[headerName];
 
-            if (!jwtToken) {
+            if (!jwtToken && jwtTokenBody) {
 
-                jwtToken = req.body && req.body.meta && req.body.meta[headerName];
                 var jwtTokenHash = req.headers[headerName + '-hash'];
 
-                if (!jwtToken) {
-                    return;
-                }
-
                 if (!jwtTokenHash) {
-                    throw new CSRFError('TOKEN_HASH_HEADER_MISSING');
+                    throw new CSRFError('BODY_CSRF_HASH_HEADER_MISSING');
                 }
 
-                if (jwtTokenHash !== hash(jwtToken)) {
-                    throw new CSRFError('TOKEN_HASH_MISMATCH');
+                if (jwtTokenHash !== hash(jwtTokenBody)) {
+                    throw new CSRFError('BODY_CSRF_HASH_MISMATCH');
                 }
+
+                jwtToken = jwtTokenBody;
             }
 
             return jwtToken;
