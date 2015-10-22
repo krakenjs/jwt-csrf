@@ -35,8 +35,8 @@ util.inherits(CSRFError, Error);
     Hash a string using sha256
  */
 
-function hash(text) {
-    return crypto.createHash('sha256').update(text).digest('hex');
+function hash(secret, text) {
+    return crypto.createHmac('sha256', secret).update(text).digest('hex');
 }
 
 /*
@@ -137,7 +137,7 @@ var PERSISTENCE_DRIVERS = {
             var headerName = options.headerName || DEFAULT_HEADER_NAME;
 
             res.setHeader(headerName, jwtToken);
-            res.setHeader(headerName + '-hash', hash(jwtToken));
+            res.setHeader(headerName + '-hash', hash(options.secret, jwtToken));
         },
 
         retrieve: function(req, res, options) {
@@ -154,7 +154,7 @@ var PERSISTENCE_DRIVERS = {
                     throw new CSRFError('BODY_CSRF_HASH_HEADER_MISSING');
                 }
 
-                if (jwtTokenHash !== hash(jwtTokenBody)) {
+                if (jwtTokenHash !== hash(options.secret, jwtTokenBody)) {
                     throw new CSRFError('BODY_CSRF_HASH_MISMATCH');
                 }
 
