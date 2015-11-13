@@ -1,7 +1,8 @@
-jwt-csrf
-========
-[![Dependency Status](http://daviddm-5042.ccg21.dev.paypalcorp.com:1337/NodeXOShared/jwt-csrf.svg)](http://daviddm-5042.ccg21.dev.paypalcorp.com:1337/NodeXOShared/jwt-csrf)
-[![devDependency Status](http://daviddm-5042.ccg21.dev.paypalcorp.com:1337/NodeXOShared/jwt-csrf/dev-status.svg)](http://daviddm-5042.ccg21.dev.paypalcorp.com:1337/NodeXOShared/jwt-csrf#info=devDependencies)
+# jwt-csrf
+
+[![Dependency Status](http://tooling.paypalcorp.com/badges/npm/version/jwt-csrf.svg?style=flat-square)](http://tooling.paypalcorp.com/badges/npm/version/jwt-csrf.svg?style=flat-square)
+[![Dependency Status](http://tooling.paypalcorp.com/badges/david/NodeXOShared/jwt-csrf.svg?style=flat-square)](http://tooling.paypalcorp.com/badges/david/NodeXOShared/jwt-csrf.svg?style=flat-square)
+[![devDependency Status](http://tooling.paypalcorp.com:/badges/david/dev/NodeXOShared/jwt-csrf.svg?style=flat-square)](http://tooling.paypalcorp.com/badges/david/NodeXOShared/jwt-csrf.svg?style=flat-square)
 
 For creating and validating JWTs.  Can be used as an API or Express middleware.
 
