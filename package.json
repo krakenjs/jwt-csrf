@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "bluebird": "^2.10.1",
-    "cryptutils-paypal": "^1.0.2",
+    "cryptutils-paypal": "^2",
     "jsonwebtoken": "~4.2.2",
     "node-uuid": "^1.4.3",
     "on-headers": "~1.0.0",
