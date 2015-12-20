@@ -44,23 +44,6 @@ module.exports = function (grunt) {
                 reporter: isFusion() ? 'xunit-file' : 'spec'
             }
         },
-        plato: {
-            fusion: {
-                options: {
-                    jshint: false,
-                    exclude: /Gruntfile.js/,
-                    complexity: {
-                        logicalor: false,
-                        switchcase: false,
-                        forin: true,
-                        trycatch: true
-                    }
-                },
-                files: {
-                    'plato-reports': srcFiles
-                }
-            }
-        },
         codecoverage: {
             all: {
                 src: testFiles,
@@ -85,12 +68,6 @@ module.exports = function (grunt) {
                 lines: 95,
                 includePattern: coverageDirectory + '/coverage.json'
             }
-        },
-        checkplato: {
-            options: {
-                dir: 'plato-reports',
-                threshold: 90
-            }
         }
     });
 
@@ -100,6 +77,6 @@ module.exports = function (grunt) {
     grunt.registerTask('cover', ['coverage']);
     grunt.registerTask('lint', ['eslint']);
     grunt.registerTask('build', ['test']);
-    grunt.registerTask('test', ['lint', 'mochatest', 'plato', 'checkplato']);
+    grunt.registerTask('test', ['lint', 'mochatest']);
     grunt.registerTask('coverage', ['clean:coverage', 'codecoverage', 'checkcoverage']);
 };
