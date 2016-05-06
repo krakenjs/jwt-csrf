@@ -24,7 +24,8 @@ function getOptions(obj) {
     return merge(obj, {
         headerName: HEADER_NAME,
         secret: SECRET,
-        macKey: MACKEY
+        macKey: MACKEY,
+        getUserToken: getUserToken
     });
 }
 
@@ -79,6 +80,10 @@ function handleCSRFError(err) {
     if (err && !(err instanceof jwtCsrf.CSRFError)) {
         throw err;
     }
+}
+
+function getUserToken(req) {
+    return req.user && req.user.encryptedAccountNumber;
 }
 
 function runMiddleware(req, res, options, callback) {
