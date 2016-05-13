@@ -87,9 +87,7 @@ You have two options for persisting the csrf token on the client side:
 
 ```javascript
 var jwtCsrf = require('jwt-csrf/client');
-
 jwtCsrf.setToken(initialToken);
-
 jwtCsrf.patchXhr();
 ```
 
