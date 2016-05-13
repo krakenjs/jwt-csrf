@@ -69,11 +69,10 @@ Note that jwt-csrf **only** works for ajax calls, not full-page posts, since it 
 
 ### Persisting the csrf token
 
-Firstly, you will need to pass the token down in your initial page render. You can get the value as follows:
+Firstly, you will need to pass the token down in your initial page render. You can get the value as follows on the server-side, to insert into your initial html:
 
 ```javascript
 var jwtCsrf = require('jwt-csrf');
-
 var token = jwtCsrf.getHeaderToken(req, res, { secret: mySecret });
 ```
 
