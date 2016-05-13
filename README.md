@@ -48,17 +48,17 @@ function(err, req, res, next) {
 
 ## CSRF Drivers
 
-### DOUBLE_SUBMIT
+##### DOUBLE_SUBMIT
 
 Persist two linked tokens on the client side, one via an http header, another via a cookie. On incoming requests, match the tokens.
 
-### AUTHED_TOKEN
+##### AUTHED_TOKEN
 
 Persist a token via an http header linked to the currently authenticated user. Validate agains the user for incoming requests.
 
 Requires `getUserToken` to be set in options
 
-### AUTHED_DOUBLE_SUBMIT
+##### AUTHED_DOUBLE_SUBMIT
 
 A combination of `DOUBLE_SUBMIT` and `AUTHED_TOKEN`, either strategy passing will allow the request to go through.
 
