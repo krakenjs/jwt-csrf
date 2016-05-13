@@ -61,3 +61,41 @@ Requires `getUserToken` to be set in options
 ### AUTHED_DOUBLE_SUBMIT
 
 A combination of `DOUBLE_SUBMIT` and `AUTHED_TOKEN`, either strategy passing will allow the request to go through.
+
+
+## Client side
+
+Note that jwt-csrf **only** works for ajax calls, not full-page posts, since it relies on being able to set and read http headers.
+
+### Persisting the csrf token
+
+Firstly, you will need to pass the token down in your initial page render. You can get the value as follows:
+
+```javascript
+var jwtCsrf = require('jwt-csrf');
+
+var token = jwtCsrf.getHeaderToken(req, res, { secret: mySecret });
+```
+
+You have two options for persisting the csrf token on the client side:
+
+#### 1. Manually
+
+- On evert ajax response, persist the `x-csrf-jwt` header
+- On every ajax request, send the persisted `x-csrf-jwt` header
+
+#### 2. Automatically, by patching XMLHttpRequest
+
+```javascript
+var jwtCsrf = require('jwt-csrf/client');
+
+jwtCsrf.setToken(initialToken);
+
+jwtCsrf.patchXhr();
+```
+
+This will hook into each request and response and automatically persist the token on the client side for you.
+
+**WARNING**: Please only use this at your own risk. It has not been thoroughly tested across all browsers, and is an experimental feature.
+
+
