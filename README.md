@@ -83,6 +83,23 @@ You have two options for persisting the csrf token on the client side:
 - On evert ajax response, persist the `x-csrf-jwt` header
 - On every ajax request, send the persisted `x-csrf-jwt` header
 
+For example:
+
+```javascript
+var csrfJwt;
+
+jQuery.ajax({
+    type: 'POST',
+    url: '/api/some/action',
+    headers: {
+        'x-csrf-jwt': csrfJwt
+    },
+    success: function(data, textStatus, request){
+        csrfJwt = request.getResponseHeader('x-csrf-jwt');
+    }
+});
+```
+
 #### 2. Automatically, by patching XMLHttpRequest
 
 ```javascript
