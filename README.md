@@ -40,7 +40,6 @@ function(err, req, res, next) {
 
 `options` is an Object with the following format:
 * **secret** : String (Required) - Your application's secret, must be cryptographically complex.
-* **macKey** : String (Required) - Your application's mac key, must be cryptographically complex.
 * **csrfDriver** : String (Optional) - CSRF driver/strategy to use. Defaults to `DOUBLE_SUBMIT`.
 * **expiresInMinutes** : Number (Optional) - A token's expiration time.  Defaults to `60`.
 * **headerName** : String (Optional) - The name of the response header that will contain the csrf token. Defaults to `x-csrf-jwt`.
