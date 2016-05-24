@@ -1,8 +1,8 @@
 
 import { interceptHeader } from './lib';
 
-var token;
-var HEADER_NAME = 'x-csrf-jwt';
+let token;
+let HEADER_NAME = 'x-csrf-jwt';
 
 export function setToken(newToken) {
     token = newToken;
