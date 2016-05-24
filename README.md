@@ -1,9 +1,5 @@
 # jwt-csrf
 
-[![Dependency Status](http://tooling.paypalcorp.com/badges/npm/version/jwt-csrf.svg?style=flat-square)](http://tooling.paypalcorp.com/badges/npm/version/jwt-csrf.svg?style=flat-square)
-[![Dependency Status](http://tooling.paypalcorp.com/badges/david/NodeXOShared/jwt-csrf.svg?style=flat-square)](http://tooling.paypalcorp.com/badges/david/NodeXOShared/jwt-csrf.svg?style=flat-square)
-[![devDependency Status](http://tooling.paypalcorp.com:/badges/david/dev/NodeXOShared/jwt-csrf.svg?style=flat-square)](http://tooling.paypalcorp.com/badges/david/NodeXOShared/jwt-csrf.svg?style=flat-square)
-
 CSRF protection using the power of JWTs. Provides a number of stateless methods of csrf protection, if you don't want to keep a session.
 
 Defaults to the [double submit](https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)_Prevention_Cheat_Sheet#Double_Submit_Cookies) method of csrf protection, but supports a number of different strategies.
@@ -111,5 +107,3 @@ jwtCsrf.patchXhr();
 This will hook into each request and response and automatically persist the token on the client side for you.
 
 **WARNING**: Please only use this at your own risk. It has not been thoroughly tested across all browsers, and is an experimental feature.
-
-
