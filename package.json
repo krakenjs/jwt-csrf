@@ -7,12 +7,31 @@
     "test": "npm run lint && gulp mocha",
     "lint": "gulp lint"
   },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/krakenjs/jwt-csrf.git"
+  },
+  "keywords": [
+    "jsonwebtoken",
+    "jwt",
+    "csrf",
+    "security",
+    "kraken",
+    "krakenjs"
+  ],
   "dependencies": {
     "jsonwebtoken": "^4.2.2",
     "node-uuid": "^1.4.3",
     "on-headers": "~1.0.0",
     "underscore": "^1.8.3"
   },
+  "licenses": [
+    {
+      "type": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  ],
+  "readmeFilename": "README.md",
   "devDependencies": {
     "babel": "^6.5.2",
     "babel-core": "^6.8.0",
@@ -37,15 +56,6 @@
     "sinon-chai": "^2.6.0",
     "webpack": "^1.13.0",
     "xunit-file": "0.0.9"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.paypal.com/NodeXOShared/jwt-csrf.git"
-  },
-  "author": "vgorthy@paypal.com",
-  "license": "PayPal",
-  "publishConfig": {
-    "registry": "http://npm.paypal.com"
   },
   "pre-commit": [
     "lint"
