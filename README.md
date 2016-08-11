@@ -40,7 +40,8 @@ function(err, req, res, next) {
 * **expiresInMinutes** : Number (Optional) - A token's expiration time.  Defaults to `60`.
 * **headerName** : String (Optional) - The name of the response header that will contain the csrf token. Defaults to `x-csrf-jwt`.
 * **excludeUrls** : Array (Optional) - An array of urls to exclude from csrf protection. Not recommended unless you know what you're doing
-* **getUserToken** : Function (Optional) - A custom method to call to get a user specific token for the `AUTHED_TOKEN` and `AUTHED_DOUBLE_SUBMIT`. Must accept `req` and return a user-specific token (like a user id) for a known user.
+* **getUserToken** : Function (Optional) - Get a user specific token for the `AUTHED_TOKEN` and `AUTHED_DOUBLE_SUBMIT` strategies. Must accept `req` and return a user-specific token (like a user id) for a known user.
+* **getCookieDomain** : Function (Optional) - Must accept `req` and return a domain that the cookie will be scoped for (Ex: ".mysite.com").  Otherwise, defaults to the domain inside of the request.
 
 ## CSRF Drivers
 

@@ -31,8 +31,8 @@ function getOptions(obj) {
 
 function getReq(obj) {
     return merge(obj, {
-        get: function() {
-            return 'https://www.paypal.com';
+        get: function(key) {
+            return 'mysite.com:8000';
         },
         protocol: 'https',
         headers: {},
@@ -60,6 +60,7 @@ function getRes(obj) {
             assert(value, 'cookie value exists');
             assert(options, 'cookie options exists');
             assert(options.httpOnly, 'cookie options exists');
+            assert.equal(options.domain, '.mysite.com', 'cookie domain has been set');
             this.cookies[key] = value;
         }
     });
@@ -83,12 +84,13 @@ function handleCSRFError(err) {
 }
 
 function getUserToken(req) {
-    return req.user && req.user.encryptedAccountNumber;
+    return req.userId;
 }
 
 function runMiddleware(req, res, options, callback) {
 
-    options = getOptions(options)
+    options = getOptions(options);
+    console.log(options);
     req = getReq(req);
     res = getRes(res);
 
@@ -115,7 +117,6 @@ function runMiddleware(req, res, options, callback) {
 
 
 describe('middleware', function() {
-
 
     it('should return and validate tokens for GET and POST in AUTHED_TOKEN mode', function() {
 
@@ -145,9 +146,7 @@ describe('middleware', function() {
 
         var req = {
             method: 'GET',
-            user: {
-                encryptedAccountNumber: 'XYZ'
-            }
+            userId: 'XYZ'
         };
         var res = {};
         var options = {csrfDriver: 'AUTHED_TOKEN'};
@@ -365,7 +364,7 @@ describe('middleware', function() {
 
             req.method = 'POST';
             req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
-            req.user = {encryptedAccountNumber: 'xyz'};
+            req.userId = 'xyz';
 
             runMiddleware(req, res, options, function(err) {
 
@@ -392,9 +391,7 @@ describe('middleware', function() {
             assert(!res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
 
             req.method = 'POST';
-            req.user = {
-                encryptedAccountNumber: 'XYZ'
-            };
+            req.userId = 'XYZ';
             req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
 
             runMiddleware(req, res, options, function(err) {
@@ -411,9 +408,7 @@ describe('middleware', function() {
 
         var req = {
             method: 'GET',
-            user: {
-                encryptedAccountNumber: 'ABC'
-            }
+            userId: 'ABC'
         };
         var res = {};
         var options = {csrfDriver: 'AUTHED_TOKEN'};
@@ -425,9 +420,7 @@ describe('middleware', function() {
             assert(!res.cookies[HEADER_NAME], 'Expected JWT cookie to be absent');
 
             req.method = 'POST';
-            req.user = {
-                encryptedAccountNumber: 'XYZ'
-            };
+            req.userId = 'XYZ';
             req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
 
             runMiddleware(req, res, options, function(err) {
@@ -538,7 +531,7 @@ describe('middleware', function() {
                 req.method = 'POST';
                 req.headers[HEADER_NAME] = res.headers[HEADER_NAME];
                 req.cookies[HEADER_NAME] = oldCookie;
-                req.user = {encryptedAccountNumber: 'xyz'};
+                req.userId = 'xyz';
 
                 runMiddleware(req, res, options, function(err) {
 
