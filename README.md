@@ -77,7 +77,7 @@ You have two options for persisting the csrf token on the client side:
 
 #### 1. Manually
 
-- On evert ajax response, persist the `x-csrf-jwt` header
+- On every ajax response, persist the `x-csrf-jwt` header
 - On every ajax request, send the persisted `x-csrf-jwt` header
 
 For example:
