@@ -4,6 +4,7 @@
 var assert = require('chai').assert;
 var underscore = require('underscore');
 var jwtCsrf = require('../index');
+var should = require('chai').should();
 
 var SECRET = 'somerandomsecret';
 var MACKEY = 'somerandommackey';
@@ -113,10 +114,95 @@ function runMiddleware(req, res, options, callback) {
 
 }
 
-
-
-
 describe('middleware', function() {
+    
+    it('should support RegExp excludeUrls in options', function() {
+
+        var req = {method: 'POST', originalUrl:'/sOmEuRl/somepath/allowMe'};
+        var res = {};
+        var options = {
+            excludeUrls: [
+                /someurl/i,
+                /zomethingElse/
+            ]
+        };
+
+        runMiddleware(req, res, options, function(err) {
+
+            assertNotError(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+        });
+
+        req.originalUrl = '/some/path/to/zomethingelse';
+        runMiddleware(req, res, options, function(err) {
+            should.exist(err);
+        });
+        
+        req.originalUrl = '/some/other/path/to/zomethingElse';
+        runMiddleware(req, res, options, function(err) {
+            should.not.exist(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+        });
+    });
+
+    it('should support arrays as RegExp opts excludeUrls in options', function() {
+
+        var req = {method: 'POST', originalUrl:'/sOmEuRl/somepath/allowMe'};
+        var res = {};
+        var options = {
+            excludeUrls: [
+                ['somePath',''],
+                ['AnOtHeR/pAtH', 'i']
+            ]
+        };
+
+        req.originalUrl = '/somepath/to/another/place';
+        runMiddleware(req, res, options, function(err) {
+            should.exist(err);
+        });
+        
+        req.originalUrl = '/somePath/to/another/Place';
+        runMiddleware(req, res, options, function(err) {
+            should.not.exist(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+        });
+
+        req.originalUrl = '/another/path/to/a/different/place';
+        runMiddleware(req, res, options, function(err) {
+            should.not.exist(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+        });
+        
+        req.originalUrl = '/AnOtHeR/pAtH/to/yet/another/place';
+        runMiddleware(req, res, options, function(err) {
+            should.not.exist(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+        });
+    });
+
+    it('should support strings as both regexp and indexOf', function() {
+
+        var req = {method: 'POST'};
+        var res = {};
+        var options = {
+            excludeUrls: [
+                '/the/road/to/n0wher3',
+                '/a/place/for/numbers/[0-9]+'
+            ]
+        };
+
+        req.originalUrl = '/the/road/to/n0wher3';
+        runMiddleware(req, res, options, function(err) {
+            should.not.exist(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+        });
+
+        req.originalUrl = '/a/place/for/numbers/123412';
+        runMiddleware(req, res, options, function(err) {
+            should.not.exist(err);
+            assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
+        });
+    });
 
     it('should return and validate tokens for GET and POST in AUTHED_TOKEN mode', function() {
 

@@ -39,7 +39,10 @@ function(err, req, res, next) {
 * **csrfDriver** : String (Optional) - CSRF driver/strategy to use. Defaults to `DOUBLE_SUBMIT`.
 * **expiresInMinutes** : Number (Optional) - A token's expiration time.  Defaults to `60`.
 * **headerName** : String (Optional) - The name of the response header that will contain the csrf token. Defaults to `x-csrf-jwt`.
-* **excludeUrls** : Array (Optional) - An array of urls to exclude from csrf protection. Not recommended unless you know what you're doing
+* **excludeUrls** : Array (Optional) - An array of elements that can be comprised of any of the following
+ * A **regular expression object**. The request url will be compared using RegExp.test() using the regular expression supplied here
+ * A **two element array** with the first being a string based regular expression and the second being the regular expression options such as "i" or "g". A regular expression will be created and tested against the request url. This is the ideal way to create a regular expression if the excludUrls are defined in a JSON file.
+ * **A string**. This string will be tested as a regular expression with no regexp options. If this doesn't match the `request.originalUrl`, then it will be tested against the url as a direct string match.
 * **getUserToken** : Function (Optional) - Get a user specific token for the `AUTHED_TOKEN` and `AUTHED_DOUBLE_SUBMIT` strategies. Must accept `req` and return a user-specific token (like a user id) for a known user.
 * **getCookieDomain** : Function (Optional) - Must accept `req` and return a domain that the cookie will be scoped for (Ex: ".mysite.com").  Otherwise, defaults to the domain inside of the request.
 

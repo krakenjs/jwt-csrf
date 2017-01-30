@@ -67,7 +67,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _lib = __webpack_require__(1);
 
-	var token;
+	var token = void 0;
 	var HEADER_NAME = 'x-csrf-jwt';
 
 	function setToken(newToken) {
@@ -109,79 +109,83 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 	exports.interceptHeader = interceptHeader;
 	function interceptHeader(name, _ref) {
-	    var get = _ref.get;
-	    var set = _ref.set;
+	    var get = _ref.get,
+	        set = _ref.set;
 
 
 	    if (set) {
-	        var open = window.XMLHttpRequest.prototype.open;
+	        (function () {
+	            var open = window.XMLHttpRequest.prototype.open;
 
-	        window.XMLHttpRequest.prototype.open = function () {
+	            window.XMLHttpRequest.prototype.open = function () {
 
-	            var result = open.apply(this, arguments);
+	                var result = open.apply(this, arguments);
 
-	            var value = set();
+	                var value = set();
 
-	            if (value) {
-	                this.setRequestHeader(name, value);
-	            } else {
-	                return result;
-	            }
-
-	            var setRequestHeader = this.setRequestHeader;
-
-	            this.setRequestHeader = function (headerName, headerValue) {
-
-	                if (headerName === name) {
-	                    return;
+	                if (value) {
+	                    this.setRequestHeader(name, value);
+	                } else {
+	                    return result;
 	                }
 
-	                return setRequestHeader.apply(this, arguments);
-	            };
+	                var setRequestHeader = this.setRequestHeader;
 
-	            return result;
-	        };
+	                this.setRequestHeader = function (headerName, headerValue) {
+
+	                    if (headerName === name) {
+	                        return;
+	                    }
+
+	                    return setRequestHeader.apply(this, arguments);
+	                };
+
+	                return result;
+	            };
+	        })();
 	    }
 
 	    if (get) {
+	        (function () {
 
-	        var send = window.XMLHttpRequest.prototype.send;
+	            var send = window.XMLHttpRequest.prototype.send;
 
-	        window.XMLHttpRequest.prototype.send = function () {
+	            window.XMLHttpRequest.prototype.send = function () {
 
-	            var self = this;
-	            var onreadystatechange = self.onreadystatechange;
+	                var self = this;
+	                var onreadystatechange = self.onreadystatechange;
 
-	            function listener() {
-	                try {
-	                    var newValue = this.getResponseHeader(name);
+	                function listener() {
+	                    try {
+	                        var newValue = this.getResponseHeader(name);
 
-	                    if (newValue) {
-	                        get(newValue);
+	                        if (newValue) {
+	                            get(newValue);
+	                        }
+	                    } catch (err) {
+	                        // pass
 	                    }
-	                } catch (err) {
-	                    // pass
+
+	                    if (onreadystatechange) {
+	                        return onreadystatechange.apply(this, arguments);
+	                    }
 	                }
 
-	                if (onreadystatechange) {
-	                    return onreadystatechange.apply(this, arguments);
-	                }
-	            }
+	                delete self.onreadystatechange;
+	                self.onreadystatechange = listener;
 
-	            delete self.onreadystatechange;
-	            self.onreadystatechange = listener;
+	                Object.defineProperty(self, 'onreadystatechange', {
+	                    get: function get() {
+	                        return listener;
+	                    },
+	                    set: function set(handler) {
+	                        onreadystatechange = handler;
+	                    }
+	                });
 
-	            Object.defineProperty(self, 'onreadystatechange', {
-	                get: function get() {
-	                    return listener;
-	                },
-	                set: function set(handler) {
-	                    onreadystatechange = handler;
-	                }
-	            });
-
-	            return send.apply(this, arguments);
-	        };
+	                return send.apply(this, arguments);
+	            };
+	        })();
 	    }
 	}
 
