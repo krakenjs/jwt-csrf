@@ -54,7 +54,7 @@ Persist two linked tokens on the client side, one via an http header, another vi
 
 ##### AUTHED_TOKEN
 
-Persist a token via an http header linked to the currently authenticated user. Validate agains the user for incoming requests.
+Persist a token via an http header linked to the currently authenticated user. Validate against the user for incoming requests.
 
 Requires `getUserToken` to be set in options
 
