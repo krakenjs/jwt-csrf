@@ -2,7 +2,7 @@
 
 CSRF protection using the power of JWTs. Provides a number of stateless methods of csrf protection, if you don't want to keep a session.
 
-Defaults to the [double submit](https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)_Prevention_Cheat_Sheet#Double_Submit_Cookies) method of csrf protection, but supports a number of different strategies.
+Defaults to the [double submit](https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)_Prevention_Cheat_Sheet#Double_Submit_Cookie) method of csrf protection, but supports a number of different strategies.
 
 ## Middleware
 
