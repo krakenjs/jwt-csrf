@@ -1,8 +1,8 @@
-
 import { interceptHeader } from './lib';
 
 let token;
 let HEADER_NAME = 'x-csrf-jwt';
+let options = {};
 
 export function setToken(newToken) {
     token = newToken;
@@ -20,6 +20,11 @@ export function getHeaderName() {
     return HEADER_NAME;
 }
 
+export function setOptions(clientOptions)
+{
+    options = clientOptions;
+}
+
 export function patchXhr() {
 
     interceptHeader(HEADER_NAME, {
@@ -31,5 +36,5 @@ export function patchXhr() {
         set() {
             return token;
         }
-    });
+    }, options);
 }
