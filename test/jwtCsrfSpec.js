@@ -115,7 +115,7 @@ function runMiddleware(req, res, options, callback) {
 }
 
 describe('middleware', function() {
-    
+
     it('should support RegExp excludeUrls in options', function() {
 
         var req = {method: 'POST', originalUrl:'/sOmEuRl/somepath/allowMe'};
@@ -137,7 +137,7 @@ describe('middleware', function() {
         runMiddleware(req, res, options, function(err) {
             should.exist(err);
         });
-        
+
         req.originalUrl = '/some/other/path/to/zomethingElse';
         runMiddleware(req, res, options, function(err) {
             should.not.exist(err);
@@ -160,7 +160,7 @@ describe('middleware', function() {
         runMiddleware(req, res, options, function(err) {
             should.exist(err);
         });
-        
+
         req.originalUrl = '/somePath/to/another/Place';
         runMiddleware(req, res, options, function(err) {
             should.not.exist(err);
@@ -172,7 +172,7 @@ describe('middleware', function() {
             should.not.exist(err);
             assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
         });
-        
+
         req.originalUrl = '/AnOtHeR/pAtH/to/yet/another/place';
         runMiddleware(req, res, options, function(err) {
             should.not.exist(err);
@@ -202,6 +202,22 @@ describe('middleware', function() {
             should.not.exist(err);
             assert(res.headers[HEADER_NAME], 'Expected JWT header to be present');
         });
+    });
+
+    it('should resolve the domain when the port is not included', function() {
+
+        var req = {
+            method: 'POST',
+            get: function() {
+                return 'mysite.com';
+            }
+        };
+        var res = {};
+        var options = {};
+
+        // The assert to check the domain is located in a function on the
+        // object returned by 'getRes()', which is called by 'runMiddleware()'
+        runMiddleware(req, res, options, function() {});
     });
 
     it('should return and validate tokens for GET and POST in AUTHED_TOKEN mode', function() {
