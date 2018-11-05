@@ -20,7 +20,7 @@
     "krakenjs"
   ],
   "dependencies": {
-    "jsonwebtoken": "^4.2.2",
+    "jsonwebtoken": "^8.3.0",
     "node-uuid": "^1.4.3",
     "on-headers": "~1.0.0",
     "underscore": "^1.8.3"
@@ -47,9 +47,9 @@
     "eslint": "^2",
     "gulp": "^3.9.1",
     "gulp-eslint": "^2.0.0",
-    "gulp-mocha": "^2.2.0",
+    "gulp-mocha": "^6.0.0",
     "gulp-webpack": "^1.5.0",
-    "mocha": "^2.2.1",
+    "mocha": "^5.2.0",
     "mocha-jenkins-reporter": "^0.1.6",
     "pre-commit": "^1.0.10",
     "sinon": "^1.17.4",
