@@ -37,7 +37,7 @@ function(err, req, res, next) {
 `options` is an Object with the following format:
 * **secret** : String (Required) - Your application's secret, must be cryptographically complex.
 * **csrfDriver** : String (Optional) - CSRF driver/strategy to use. Defaults to `DOUBLE_SUBMIT`.
-* **expiresInMinutes** : Number (Optional) - A token's expiration time.  Defaults to `60`.
+* **expiresIn** : Number or String (Optional) - A token's expiration time. If a number is passed, it is understood as seconds. If a string is passed, it must be in [zeit/ms](https://github.com/zeit/ms) time span format or it will be interpreted as milliseconds. Defaults to `3600`.
 * **headerName** : String (Optional) - The name of the response header that will contain the csrf token. Defaults to `x-csrf-jwt`.
 * **excludeUrls** : Array (Optional) - An array of elements that can be comprised of any of the following
  * A **regular expression object**. The request url will be compared using RegExp.test() using the regular expression supplied here
