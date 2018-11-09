@@ -20,7 +20,7 @@
     "krakenjs"
   ],
   "dependencies": {
-    "jsonwebtoken": "^4.2.2",
+    "jsonwebtoken": "^8.3.0",
     "node-uuid": "^1.4.3",
     "on-headers": "~1.0.0",
     "underscore": "^1.8.3"
