@@ -38,7 +38,7 @@ function(err, req, res, next) {
 * **secret** : String (Required) - Your application's secret, must be cryptographically complex.
 * **csrfDriver** : String (Optional) - CSRF driver/strategy to use. Defaults to `DOUBLE_SUBMIT`. 
 * **algorithm**: String (Optional) - Requires `node >= v10.0.0`. The Cipher Algorithm for encrypting the token. Available algorithms depend on `OpenSSL`. Defaults to `aes-256-ctr`.
-* **iv**: String (Optional) - Requires `node >= v10.0.0`. The initialization vector for algorithms that require them. Should be unpredictable and unique, and should be excluded when not necessary. Defaults to `null`.
+* **iv**: String (Optional) - Requires `node >= v10.0.0`. The initialization vector for algorithms that require them. Should be unpredictable and unique, and should be excluded when not necessary. Defaults to `crypto.randomBytes(16)` to match default algorithm.
 * **expiresInMinutes** : Number (Optional) - A token's expiration time.  Defaults to `60`.
 * **headerName** : String (Optional) - The name of the response header that will contain the csrf token. Defaults to ``x-csrf-jwt`.
 * **excludeUrls** : Array (Optional) - An array of elements that can be comprised of any of the following
