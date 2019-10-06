@@ -36,13 +36,15 @@ function(err, req, res, next) {
 
 `options` is an Object with the following format:
 * **secret** : String (Required) - Your application's secret, must be cryptographically complex.
-* **csrfDriver** : String (Optional) - CSRF driver/strategy to use. Defaults to `DOUBLE_SUBMIT`.
+* **csrfDriver** : String (Optional) - CSRF driver/strategy to use. Defaults to `DOUBLE_SUBMIT`. 
+* **algorithm**: String (Optional) - Requires `node >= v10.0.0`. The Cipher Algorithm for encrypting the token. Available algorithms depend on `OpenSSL`. Defaults to `aes-256-ctr`.
+* **iv**: String (Optional) - Requires `node >= v10.0.0`. The initialization vector for algorithms that require them. Should be unpredictable and unique, and should be excluded when not necessary. Defaults to `null`.
 * **expiresInMinutes** : Number (Optional) - A token's expiration time.  Defaults to `60`.
-* **headerName** : String (Optional) - The name of the response header that will contain the csrf token. Defaults to `x-csrf-jwt`.
+* **headerName** : String (Optional) - The name of the response header that will contain the csrf token. Defaults to ``x-csrf-jwt`.
 * **excludeUrls** : Array (Optional) - An array of elements that can be comprised of any of the following
- * A **regular expression object**. The request url will be compared using RegExp.test() using the regular expression supplied here
- * A **two element array** with the first being a string based regular expression and the second being the regular expression options such as "i" or "g". A regular expression will be created and tested against the request url. This is the ideal way to create a regular expression if the excludUrls are defined in a JSON file.
- * **A string**. This string will be tested as a regular expression with no regexp options. If this doesn't match the `request.originalUrl`, then it will be tested against the url as a direct string match.
+  * A **regular expression object**. The request url will be compared using RegExp.test() using the regular expression supplied here
+  * A **two element array** with the first being a string based regular expression and the second being the regular expression options such as "i" or "g". A regular expression will be created and tested against the request url. This is the ideal way to create a regular expression if the excludUrls are defined in a JSON file.
+  * **A string**. This string will be tested as a regular expression with no regexp options. If this doesn't match the `request.originalUrl`, then it will be tested against the url as a direct string match.
 * **getUserToken** : Function (Optional) - Get a user specific token for the `AUTHED_TOKEN` and `AUTHED_DOUBLE_SUBMIT` strategies. Must accept `req` and return a user-specific token (like a user id) for a known user.
 * **getCookieDomain** : Function (Optional) - Must accept `req` and return a domain that the cookie will be scoped for (Ex: ".mysite.com").  Otherwise, defaults to the domain inside of the request.
 
